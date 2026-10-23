@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dependentsIndex,
   effectivePriority,
   fullyDeclared,
   ownPriority,
   plannedOrder,
   selectActionable,
+  territoriesOverlap,
   type BoardIssue,
 } from './order.ts';
 
@@ -13,7 +15,8 @@ import {
  * creation times, blockers and territories. The planned order below was
  * worked out by hand from those facts; if the implementation does not
  * reproduce it from the markers alone, either the markers or the code is
- * wrong.
+ * wrong. #714 is tier-2 but blocks tier-1 #715, so it counts as tier-1 and,
+ * being older, comes before #720.
  */
 
 const CATALOG = 'packages/core/src/catalog.ts';
@@ -55,7 +58,7 @@ const WORKED_EXAMPLE: BoardIssue[] = [
 describe('the worked example, derived from the markers', () => {
   it('produces the planned sequence', () => {
     expect(plannedOrder(WORKED_EXAMPLE).map((i) => i.number)).toEqual([
-      694, 695, 720, 714, 715, 713, 717,
+      694, 695, 714, 715, 720, 713, 717,
     ]);
   });
 
@@ -78,7 +81,7 @@ describe('the worked example, derived from the markers', () => {
 
   it('offers only the unblocked work as claimable right now', () => {
     const selection = selectActionable(WORKED_EXAMPLE);
-    expect(selection.actionable.map((i) => i.number)).toEqual([694, 720, 714, 713, 717]);
+    expect(selection.actionable.map((i) => i.number)).toEqual([694, 714, 720, 713, 717]);
   });
 
   it('and says WHY each of the others is not on offer', () => {
@@ -129,21 +132,112 @@ describe('territory keeps two lanes off the same file', () => {
 });
 
 describe('priority', () => {
-  it('inherits the highest priority of anything blocking it', () => {
-    // A tier-3 issue waiting on tier-1 work is not tier-3 work any more.
-    const blocker = issue(10, '2026-08-24T00:00:00Z', 1, '**Blocked by:** none');
-    const dependent = issue(11, '2026-08-24T00:00:00Z', 3, '**Blocked by:** #10');
-    const byNumber = new Map([blocker, dependent].map((i) => [i.number, i]));
-    expect(ownPriority(dependent.labels)).toBe(3);
-    expect(effectivePriority(dependent, byNumber)).toBe(1);
+  it('a prerequisite inherits the highest priority of the open work it unblocks', () => {
+    // Tier-1 work waiting on a tier-3 prerequisite makes the prerequisite
+    // tier-1 work: it is on the critical path.
+    const prerequisite = issue(10, '2026-08-24T00:00:00Z', 3, '**Blocked by:** none');
+    const urgent = issue(11, '2026-08-24T00:00:00Z', 1, '**Blocked by:** #10');
+    const dependents = dependentsIndex([prerequisite, urgent]);
+    expect(ownPriority(prerequisite.labels)).toBe(3);
+    expect(effectivePriority(prerequisite, dependents)).toBe(1);
+  });
+
+  it('does not lift a dependent to the priority of its prerequisite', () => {
+    // The direction matters: low-priority work is not urgent merely because
+    // something urgent came before it.
+    const urgentPrerequisite = issue(12, '2026-08-24T00:00:00Z', 1, '**Blocked by:** none');
+    const later = issue(13, '2026-08-24T00:00:00Z', 3, '**Blocked by:** #12');
+    expect(effectivePriority(later, dependentsIndex([urgentPrerequisite, later]))).toBe(3);
+  });
+
+  it('carries priority back through a chain of prerequisites', () => {
+    const root = issue(14, '2026-08-24T00:00:00Z', 4, '**Blocked by:** none');
+    const middle = issue(15, '2026-08-24T00:00:00Z', 3, '**Blocked by:** #14');
+    const urgent = issue(16, '2026-08-24T00:00:00Z', 1, '**Blocked by:** #15');
+    expect(effectivePriority(root, dependentsIndex([root, middle, urgent]))).toBe(1);
+  });
+
+  it('ignores dependents that are already closed', () => {
+    const prerequisite = issue(17, '2026-08-24T00:00:00Z', 3, '**Blocked by:** none');
+    const done = {
+      ...issue(18, '2026-08-24T00:00:00Z', 1, '**Blocked by:** #17'),
+      state: 'closed' as const,
+    };
+    expect(effectivePriority(prerequisite, dependentsIndex([prerequisite, done]))).toBe(3);
+  });
+
+  it('offers a tier-4 prerequisite of tier-1 work ahead of unrelated tier-2 work', () => {
+    const prerequisite = issue(
+      40,
+      '2026-08-25T00:00:00Z',
+      4,
+      '**Blocked by:** none\n**Territory:** a.ts',
+    );
+    const urgent = issue(41, '2026-08-24T00:00:00Z', 1, '**Blocked by:** #40\n**Territory:** b.ts');
+    const unrelated = issue(
+      42,
+      '2026-08-24T00:00:00Z',
+      2,
+      '**Blocked by:** none\n**Territory:** c.ts',
+    );
+    const order = selectActionable([prerequisite, urgent, unrelated]).actionable.map(
+      (i) => i.number,
+    );
+    expect(order).toEqual([40, 42]);
   });
 
   it('survives a marker cycle instead of hanging the lane', () => {
     const a = issue(20, '2026-08-24T00:00:00Z', 2, '**Blocked by:** #21');
     const b = issue(21, '2026-08-24T00:00:00Z', 2, '**Blocked by:** #20');
-    const byNumber = new Map([a, b].map((i) => [i.number, i]));
-    expect(effectivePriority(a, byNumber)).toBe(2);
+    expect(effectivePriority(a, dependentsIndex([a, b]))).toBe(2);
     expect(plannedOrder([a, b]).map((i) => i.number)).toHaveLength(2);
+  });
+});
+
+describe('territoriesOverlap', () => {
+  it.each([
+    ['packages/core/src/catalog/', 'packages/core/src/catalog/verify.ts'],
+    ['packages/core/src/catalog/verify.ts', 'packages/core/src/catalog'],
+    ['./packages/core', 'packages/core/src/a.ts'],
+    ['packages/core/**', 'packages/core/src/a.ts'],
+    ['packages/ui/src/*.tsx', 'packages/ui/src/App.tsx'],
+    ['.', 'anything/at/all.ts'],
+    ['tools/board/src/order.ts', 'tools/board/src/order.ts'],
+  ])('%j overlaps %j', (a, b) => {
+    expect(territoriesOverlap(a, b)).toBe(true);
+  });
+
+  it.each([
+    ['packages/core/src/catalog', 'packages/core/src/catalog-extra.ts'],
+    ['packages/core/src/a.ts', 'packages/core/src/b.ts'],
+    ['packages/ui', 'packages/uikit/src/a.ts'],
+  ])('%j does not overlap %j', (a, b) => {
+    expect(territoriesOverlap(a, b)).toBe(false);
+  });
+
+  it('keeps a lane off a file inside a directory another lane holds', () => {
+    const held = {
+      ...issue(
+        50,
+        '2026-08-24T00:00:00Z',
+        1,
+        '**Blocked by:** none\n**Territory:** packages/core/src/catalog/',
+      ),
+      labels: ['build', 'priority:tier-1', 'status:in-progress'],
+    };
+    const inside = issue(
+      51,
+      '2026-08-24T00:00:00Z',
+      1,
+      '**Blocked by:** none\n**Territory:** packages/core/src/catalog/verify.ts',
+    );
+    const selection = selectActionable([held, inside]);
+    expect(selection.actionable).toEqual([]);
+    expect(selection.skipped.find((s) => s.issue.number === 51)?.reason).toEqual({
+      kind: 'territory',
+      sharedWith: 50,
+      paths: ['packages/core/src/catalog/verify.ts'],
+    });
   });
 });
 

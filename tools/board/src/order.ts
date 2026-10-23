@@ -78,30 +78,65 @@ export function ownPriority(labels: readonly string[]): number {
   return Number.MAX_SAFE_INTEGER;
 }
 
+/** The open issues that declare each issue number as a blocker. */
+export function dependentsIndex(issues: Iterable<BoardIssue>): Map<number, BoardIssue[]> {
+  const dependents = new Map<number, BoardIssue[]>();
+  for (const issue of issues) {
+    if (issue.state !== 'open') continue;
+    for (const number of declaredValues(blockedBy(issue.body))) {
+      const list = dependents.get(number) ?? [];
+      list.push(issue);
+      dependents.set(number, list);
+    }
+  }
+  return dependents;
+}
+
 /**
- * A dependent inherits the highest priority of anything blocking it, so a
- * prerequisite about to be built does not leave its dependent sitting in a
- * lower tier for weeks.
+ * A prerequisite inherits the highest priority of the open work it unblocks,
+ * directly or through a chain, so urgent work never waits behind its own
+ * low-priority prerequisite while lanes take unrelated work first. This is
+ * the rule `.claude/commands/conductor.md` states; it deliberately runs from
+ * dependents to prerequisites, the critical-path direction.
  *
  * Resolved transitively, and cycle-safe: a marker loop must not hang the
  * lane, so a number already being resolved contributes nothing further.
  */
 export function effectivePriority(
   issue: BoardIssue,
-  byNumber: ReadonlyMap<number, BoardIssue>,
+  dependents: ReadonlyMap<number, readonly BoardIssue[]>,
   seen: ReadonlySet<number> = new Set(),
 ): number {
   if (seen.has(issue.number)) return ownPriority(issue.labels);
   const nextSeen = new Set(seen).add(issue.number);
-  const declaration = blockedBy(issue.body);
   let best = ownPriority(issue.labels);
-  if (declaration.kind === 'declared') {
-    for (const number of declaration.values) {
-      const blocker = byNumber.get(number);
-      if (blocker) best = Math.min(best, effectivePriority(blocker, byNumber, nextSeen));
-    }
+  for (const dependent of dependents.get(issue.number) ?? []) {
+    best = Math.min(best, effectivePriority(dependent, dependents, nextSeen));
   }
   return best;
+}
+
+/**
+ * A territory entry reduced to the directory or file it covers: no leading
+ * `./`, no trailing slash, and cut at the first segment holding a glob, so
+ * `packages/core/**` covers `packages/core`.
+ */
+function territoryRoot(path: string): string {
+  const segments = path.trim().replace(/^\.\//, '').split('/');
+  const glob = segments.findIndex((segment) => segment.includes('*'));
+  return (glob === -1 ? segments : segments.slice(0, glob)).join('/').replace(/\/+$/, '');
+}
+
+/**
+ * True when two territory entries can name the same file: they are equal, or
+ * one is a directory containing the other. An entry that reduces to nothing
+ * (`.` or `**`) covers the whole repository.
+ */
+export function territoriesOverlap(a: string, b: string): boolean {
+  const x = territoryRoot(a);
+  const y = territoryRoot(b);
+  if (x === '' || x === '.' || y === '' || y === '.') return true;
+  return x === y || y.startsWith(`${x}/`) || x.startsWith(`${y}/`);
 }
 
 /** Open, labelled `build`, and not waiting on Paul (`owner-action`) or on a ruling (`decision`). */
@@ -133,8 +168,12 @@ function declaredValues<T>(declaration: Declaration<T>): readonly T[] {
 }
 
 /** Priority first, oldest within a tier: the pull order, derived rather than remembered. */
-function compare(a: BoardIssue, b: BoardIssue, byNumber: ReadonlyMap<number, BoardIssue>): number {
-  const priority = effectivePriority(a, byNumber) - effectivePriority(b, byNumber);
+function compare(
+  a: BoardIssue,
+  b: BoardIssue,
+  dependents: ReadonlyMap<number, readonly BoardIssue[]>,
+): number {
+  const priority = effectivePriority(a, dependents) - effectivePriority(b, dependents);
   if (priority !== 0) return priority;
   const age = Date.parse(a.createdAt) - Date.parse(b.createdAt);
   return age !== 0 ? age : a.number - b.number;
@@ -152,12 +191,15 @@ function compare(a: BoardIssue, b: BoardIssue, byNumber: ReadonlyMap<number, Boa
 export function selectActionable(issues: readonly BoardIssue[]): Selection {
   const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
   const openNumbers = new Set(issues.filter((i) => i.state === 'open').map((i) => i.number));
+  const dependents = dependentsIndex(issues);
   const heldTerritory = issues
     .filter((issue) => issue.state === 'open' && holdsTerritory(issue))
     .map((issue) => ({
       number: issue.number,
-      paths: new Set(declaredValues(territory(issue.body))),
+      paths: declaredValues(territory(issue.body)),
     }));
+  const overlapsHeld = (held: { paths: readonly string[] }, path: string): boolean =>
+    held.paths.some((heldPath) => territoriesOverlap(heldPath, path));
 
   const actionable: BoardIssue[] = [];
   const skipped: { issue: BoardIssue; reason: SkipReason }[] = [];
@@ -198,14 +240,14 @@ export function selectActionable(issues: readonly BoardIssue[]): Selection {
       continue;
     }
     const files = declaredValues(paths);
-    const collision = heldTerritory.find((held) => files.some((path) => held.paths.has(path)));
+    const collision = heldTerritory.find((held) => files.some((path) => overlapsHeld(held, path)));
     if (collision) {
       skipped.push({
         issue,
         reason: {
           kind: 'territory',
           sharedWith: collision.number,
-          paths: files.filter((path) => collision.paths.has(path)),
+          paths: files.filter((path) => overlapsHeld(collision, path)),
         },
       });
       continue;
@@ -213,7 +255,7 @@ export function selectActionable(issues: readonly BoardIssue[]): Selection {
     actionable.push(issue);
   }
 
-  actionable.sort((a, b) => compare(a, b, byNumber));
+  actionable.sort((a, b) => compare(a, b, dependents));
   return { actionable, skipped, unassessed };
 }
 
@@ -226,7 +268,7 @@ export function selectActionable(issues: readonly BoardIssue[]): Selection {
  * sort.
  */
 export function plannedOrder(issues: readonly BoardIssue[]): readonly BoardIssue[] {
-  const byNumber = new Map(issues.map((issue) => [issue.number, issue]));
+  const dependents = dependentsIndex(issues);
   const remaining = issues.filter((issue) => isBuildable(issue) && !claimed(issue));
   const placed = new Set(
     issues.filter((issue) => issue.state === 'closed').map((issue) => issue.number),
@@ -245,7 +287,7 @@ export function plannedOrder(issues: readonly BoardIssue[]): readonly BoardIssue
     // would leave nothing ready. Report the deadlock by placing what is left
     // in plain order rather than looping for ever.
     const pool = ready.length > 0 ? ready : remaining;
-    pool.sort((a, b) => compare(a, b, byNumber));
+    pool.sort((a, b) => compare(a, b, dependents));
     const next = pool[0]!;
     order.push(next);
     placed.add(next.number);
