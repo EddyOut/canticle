@@ -1,5 +1,7 @@
 # Claude Code kickoff
 
+This is the record of how the project was started; the kickoff session ran on 2026-10-23. It is kept for history. The rules that apply now are in `CLAUDE.md`. In particular, work no longer proceeds one milestone at a time (Paul's ruling, 2026-10-23), so the milestone prompt below is superseded.
+
 ## Before the first session
 
 1. Confirm your employment agreement allows this project (IP and outside-work clauses).
