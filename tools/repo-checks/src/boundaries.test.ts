@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   checkBoundaries,
   declaredDependencies,
-  importSpecifiers,
+  fileImports,
   matchesPackage,
   matchesPath,
   owningProject,
@@ -125,24 +125,35 @@ describe('declaredDependencies', () => {
   });
 });
 
-describe('importSpecifiers', () => {
+describe('fileImports', () => {
   it('finds static, dynamic, re-exported, type-only and required imports', () => {
     const source = [
       "import a from './a.ts';",
       "export { b } from '../b.ts';",
+      "export * from './all.ts';",
       "import 'side-effect';",
       "const c = await import('../../packages/personal/store.ts');",
       "const d = require('@canticle/personal/x');",
       "import type { E } from '@scope/types';",
+      "import f = require('./f.ts');",
+      "type G = import('./g.ts').G;",
+      'const h = await import(`./h.ts`);',
     ].join('\n');
-    expect(importSpecifiers(source)).toEqual([
-      './a.ts',
-      '../b.ts',
-      'side-effect',
-      '../../packages/personal/store.ts',
-      '@canticle/personal/x',
-      '@scope/types',
-    ]);
+    expect(fileImports(source, 'src/a.ts')).toEqual({
+      specifiers: [
+        './a.ts',
+        '../b.ts',
+        './all.ts',
+        'side-effect',
+        '../../packages/personal/store.ts',
+        '@canticle/personal/x',
+        '@scope/types',
+        './f.ts',
+        './g.ts',
+        './h.ts',
+      ],
+      unresolved: [],
+    });
   });
 
   it('ignores imports written in comments and strings', () => {
@@ -151,7 +162,36 @@ describe('importSpecifiers', () => {
       'const s = "import b from \'./in-string.ts\'";',
       'const t = `import c from "./in-template.ts"`;',
     ].join('\n');
-    expect(importSpecifiers(source)).toEqual([]);
+    expect(fileImports(source, 'src/a.ts').specifiers).toEqual([]);
+  });
+
+  it('still sees an import after a regular expression containing a quote', () => {
+    const source = "const quote = /'/; const { plan } = await import('../personal/store.ts');";
+    expect(fileImports(source, 'src/a.ts').specifiers).toEqual(['../personal/store.ts']);
+  });
+
+  it('still sees an import after JSX text containing a quote', () => {
+    const source = [
+      "const Note = () => <p>Don't panic</p>;",
+      "const { plan } = await import('../personal/store.ts');",
+    ].join('\n');
+    expect(fileImports(source, 'src/note.tsx').specifiers).toEqual(['../personal/store.ts']);
+  });
+
+  it('reports import() and require() calls whose target is not a literal', () => {
+    const source = [
+      'const a = await import(target);',
+      "const b = require('../' + 'personal/store.ts');",
+      'const c = await import(`../${dir}/store.ts`);',
+    ].join('\n');
+    expect(fileImports(source, 'src/a.ts')).toEqual({
+      specifiers: [],
+      unresolved: [
+        'import(target)',
+        "require('../' + 'personal/store.ts')",
+        'import(`../${dir}/store.ts`)',
+      ],
+    });
   });
 });
 
@@ -258,6 +298,13 @@ describe('scanImports', () => {
       'react',
     ]);
     expect([...(scan.imports.get('packages/ui') ?? [])]).toEqual(['react']);
+  });
+
+  it('reports non-literal imports with their file', () => {
+    const scan = scanImports([file('packages/core/src/a.ts', 'await import(name);')], projects);
+    expect(scan.unresolved).toEqual([
+      { file: 'packages/core/src/a.ts', expression: 'import(name)' },
+    ]);
   });
 
   it('applies the rules to undeclared imports once merged', () => {

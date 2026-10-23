@@ -112,6 +112,26 @@ describe('cli boundaries', () => {
     expect(output).toContain('depends on or imports @canticle/personal');
   });
 
+  it('fails an escape hidden after a regular expression containing a quote', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts':
+        "const quote = /'/; const { plan } = await import('../../personal/src/store.ts');\n",
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('leaves packages/core into packages/personal');
+  });
+
+  it('fails an import whose target is computed', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts':
+        "const store = await import('../../' + 'personal/src/store.ts');\n",
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('cannot check it');
+  });
+
   it('passes a workspace whose imports stay inside their packages', () => {
     const { root, listing } = workspace({
       'packages/core/src/index.ts': "import { helper } from './helper.ts';\n",

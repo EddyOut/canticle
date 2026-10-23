@@ -145,13 +145,66 @@ export function declaredDependencies(manifest: unknown): string[] {
   return [...names].sort();
 }
 
+export interface FileImports {
+  /** Literal module specifiers, in source order. */
+  specifiers: string[];
+  /** Source text of `import()` or `require()` calls whose target is not a literal. */
+  unresolved: string[];
+}
+
+function scriptKind(path: string): ts.ScriptKind {
+  if (path.endsWith('.tsx')) return ts.ScriptKind.TSX;
+  if (path.endsWith('.jsx')) return ts.ScriptKind.JSX;
+  if (/\.[cm]?js$/.test(path)) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
 /**
- * Module specifiers a source file imports: static and dynamic imports,
- * re-exports, type-only imports and `require` calls. TypeScript's own scanner
- * reads them, so an import written inside a string or a comment is ignored.
+ * What a source file imports: static imports, re-exports, type-only imports,
+ * `import x = require()`, `import('...')` types, and `import()` and `require()`
+ * calls. The file is parsed into a full syntax tree, so nothing written in a
+ * string, comment, regular expression or JSX text can hide or fake an import.
+ * (TypeScript's quicker `preProcessFile` scanner can be thrown off by a
+ * regular expression containing a quote, and then misses every later import.)
+ *
+ * An `import()` or `require()` whose argument is not a literal cannot be
+ * checked against the rules, so it is reported rather than skipped. A file with
+ * syntax errors may parse incompletely, but such a file already fails the
+ * typecheck or lint gate.
  */
-export function importSpecifiers(source: string): string[] {
-  return ts.preProcessFile(source, true, true).importedFiles.map((file) => file.fileName);
+export function fileImports(source: string, path: string): FileImports {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, scriptKind(path));
+  const specifiers: string[] = [];
+  const unresolved: string[] = [];
+  const literal = (node: ts.Node | undefined): string | undefined =>
+    node !== undefined && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+      ? node.text
+      : undefined;
+  const add = (node: ts.Node | undefined): void => {
+    const text = literal(node);
+    if (text !== undefined) specifiers.push(text);
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      add(node.moduleSpecifier);
+    } else if (ts.isImportEqualsDeclaration(node)) {
+      if (ts.isExternalModuleReference(node.moduleReference)) add(node.moduleReference.expression);
+    } else if (ts.isImportTypeNode(node)) {
+      if (ts.isLiteralTypeNode(node.argument)) add(node.argument.literal);
+    } else if (ts.isCallExpression(node)) {
+      const isImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require';
+      if (isImport || isRequire) {
+        const target = literal(node.arguments[0]);
+        if (target !== undefined) specifiers.push(target);
+        else unresolved.push(node.getText(file));
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return { specifiers, unresolved };
 }
 
 /**
@@ -197,11 +250,18 @@ export interface PackageEscape {
   into: string | null;
 }
 
+export interface UnresolvedImport {
+  file: string;
+  expression: string;
+}
+
 export interface ImportScan {
   /** Bare package names imported by each project's files, keyed by project path. */
   imports: Map<string, Set<string>>;
   /** Relative or absolute imports that leave the importing file's package. */
   escapes: PackageEscape[];
+  /** `import()` or `require()` calls whose target is not a literal. */
+  unresolved: UnresolvedImport[];
 }
 
 export function scanImports(
@@ -210,11 +270,14 @@ export function scanImports(
 ): ImportScan {
   const imports = new Map<string, Set<string>>();
   const escapes: PackageEscape[] = [];
+  const unresolved: UnresolvedImport[] = [];
 
   for (const file of files) {
     const from = owningProject(file.path, projects);
     if (from === undefined) continue;
-    for (const specifier of importSpecifiers(file.source)) {
+    const found = fileImports(file.source, file.path);
+    for (const expression of found.unresolved) unresolved.push({ file: file.path, expression });
+    for (const specifier of found.specifiers) {
       if (specifier.startsWith('node:')) continue;
       const name = packageName(specifier);
       if (name !== null) {
@@ -245,7 +308,7 @@ export function scanImports(
       }
     }
   }
-  return { imports, escapes };
+  return { imports, escapes, unresolved };
 }
 
 /** Each project with the packages its files import added to its dependencies. */

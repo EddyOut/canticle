@@ -107,6 +107,11 @@ function runBoundaries(): void {
   const files = sourceFiles(root);
   if (files.length === 0) fail('Boundary check found no source files to scan.');
   const scan = scanImports(files, projects);
+  for (const u of scan.unresolved) {
+    console.error(
+      `${u.file} uses ${u.expression}, whose target is not a literal, so the boundary rules cannot check it.`,
+    );
+  }
   for (const e of scan.escapes) {
     const into = e.into === null ? 'outside the repository' : `into ${e.into || 'the root'}`;
     console.error(
@@ -123,9 +128,10 @@ function runBoundaries(): void {
       );
     }
   }
-  if (violations.length > 0 || scan.escapes.length > 0) {
+  const problems = violations.length + scan.escapes.length + scan.unresolved.length;
+  if (problems > 0) {
     fail(
-      `${violations.length} boundary violation(s), ${scan.escapes.length} import(s) leaving their package.`,
+      `${violations.length} boundary violation(s), ${scan.escapes.length} import(s) leaving their package, ${scan.unresolved.length} import(s) that cannot be checked.`,
     );
   }
   console.log(
