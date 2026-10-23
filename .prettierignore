@@ -1,0 +1,7 @@
+# Prose and legal text are edited by hand, and docs/ changes ride in their own pull requests.
+*.md
+LICENSE
+pnpm-lock.yaml
+node_modules/
+dist/
+coverage/
