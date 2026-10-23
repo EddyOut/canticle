@@ -28,14 +28,20 @@ const SELF_PACKAGE = '@canticle/repo-checks';
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']);
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage']);
 
-/** Every source file under root, skipping dependencies, build output and dot-directories. */
-function sourceFiles(root: string): SourceFile[] {
+/**
+ * Every source file under root, skipping dependencies, build output and
+ * dot-directories, plus every symbolic link found on the way: an import
+ * through a link reads wherever the link points, which the rules cannot see.
+ */
+function sourceFiles(root: string): { files: SourceFile[]; links: string[] } {
   const files: SourceFile[] = [];
+  const links: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name)) continue;
       const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
+      if (entry.isSymbolicLink()) links.push(relative(root, full).split(sep).join('/'));
+      else if (entry.isDirectory()) walk(full);
       else if (entry.isFile() && SOURCE_EXTENSIONS.has(extname(entry.name))) {
         files.push({
           path: relative(root, full).split(sep).join('/'),
@@ -45,7 +51,7 @@ function sourceFiles(root: string): SourceFile[] {
     }
   };
   walk(root);
-  return files;
+  return { files, links };
 }
 
 function readStdin(): string {
@@ -104,13 +110,14 @@ function runBoundaries(): void {
     );
   }
 
-  const files = sourceFiles(root);
+  const { files, links } = sourceFiles(root);
   if (files.length === 0) fail('Boundary check found no source files to scan.');
+  for (const link of links) {
+    console.error(`${link} is a symbolic link; imports through it cannot be checked.`);
+  }
   const scan = scanImports(files, projects);
   for (const u of scan.unresolved) {
-    console.error(
-      `${u.file} uses ${u.expression}, whose target is not a literal, so the boundary rules cannot check it.`,
-    );
+    console.error(`${u.file} imports ${u.expression}, which cannot be checked: ${u.reason}.`);
   }
   for (const e of scan.escapes) {
     const into = e.into === null ? 'outside the repository' : `into ${e.into || 'the root'}`;
@@ -128,10 +135,10 @@ function runBoundaries(): void {
       );
     }
   }
-  const problems = violations.length + scan.escapes.length + scan.unresolved.length;
+  const problems = violations.length + scan.escapes.length + scan.unresolved.length + links.length;
   if (problems > 0) {
     fail(
-      `${violations.length} boundary violation(s), ${scan.escapes.length} import(s) leaving their package, ${scan.unresolved.length} import(s) that cannot be checked.`,
+      `${violations.length} boundary violation(s), ${scan.escapes.length} import(s) leaving their package, ${scan.unresolved.length} import(s) that cannot be checked, ${links.length} symbolic link(s).`,
     );
   }
   console.log(

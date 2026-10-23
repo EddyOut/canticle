@@ -303,8 +303,60 @@ describe('scanImports', () => {
   it('reports non-literal imports with their file', () => {
     const scan = scanImports([file('packages/core/src/a.ts', 'await import(name);')], projects);
     expect(scan.unresolved).toEqual([
-      { file: 'packages/core/src/a.ts', expression: 'import(name)' },
+      {
+        file: 'packages/core/src/a.ts',
+        expression: 'import(name)',
+        reason: 'its target is not a literal',
+      },
     ]);
+  });
+
+  it.each([
+    ['./%2e%2e/personal/store.ts', 'resolve differently as a URL'],
+    ['..\\personal\\store.ts', 'resolve differently as a URL'],
+    ['..\t/personal/store.ts', 'resolve differently as a URL'],
+    ['./café.ts', 'resolve differently as a URL'],
+    ['file:///repo/packages/personal/store.ts', 'names a URL'],
+    ['data:text/javascript,export default 1', 'names a URL'],
+    ['@canticle/core/../personal/store.ts', 'climbs out of the package'],
+  ])('reports %j as uncheckable', (specifier, reason) => {
+    const scan = scanImports(
+      [file('packages/core/src/a.ts', `await import(${JSON.stringify(specifier)});`)],
+      projects,
+    );
+    expect(scan.escapes).toEqual([]);
+    expect(scan.unresolved).toHaveLength(1);
+    expect(scan.unresolved[0]?.reason).toContain(reason);
+  });
+
+  it('resolves a relative import after dropping its query or fragment', () => {
+    const scan = scanImports(
+      [
+        file(
+          'packages/core/src/a.ts',
+          "import icon from './icon.svg?url';",
+          "import raw from '../../personal/store.ts?raw';",
+        ),
+      ],
+      projects,
+    );
+    expect(scan.unresolved).toEqual([]);
+    expect(scan.escapes.map((e) => e.target)).toEqual(['packages/personal/store.ts']);
+  });
+
+  it('accepts package-internal # imports and plain subpaths', () => {
+    const scan = scanImports(
+      [
+        file(
+          'packages/core/src/a.ts',
+          "import a from '#internal/a';",
+          "import b from 'pkg/sub/b.js';",
+        ),
+      ],
+      projects,
+    );
+    expect(scan.unresolved).toEqual([]);
+    expect(scan.escapes).toEqual([]);
   });
 
   it('applies the rules to undeclared imports once merged', () => {

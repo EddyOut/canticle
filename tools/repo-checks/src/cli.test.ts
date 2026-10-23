@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -129,7 +129,26 @@ describe('cli boundaries', () => {
     });
     const { status, output } = run('boundaries', listing, root);
     expect(status).toBe(1);
-    expect(output).toContain('cannot check it');
+    expect(output).toContain('cannot be checked: its target is not a literal');
+  });
+
+  it('fails a percent-encoded escape that Node would resolve into the personal store', () => {
+    const { root, listing } = workspace({
+      'packages/core/index.mjs': "const store = await import('./%2e%2e/personal/src/store.ts');\n",
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('cannot be checked: it uses characters');
+  });
+
+  it('fails a symbolic link inside a package', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts': "import { plan } from './link/store.ts';\n",
+    });
+    symlinkSync(join(root, 'packages/personal/src'), join(root, 'packages/core/src/link'));
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('packages/core/src/link is a symbolic link');
   });
 
   it('passes a workspace whose imports stay inside their packages', () => {

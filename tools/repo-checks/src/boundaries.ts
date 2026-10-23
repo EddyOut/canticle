@@ -19,6 +19,16 @@
  * the root. So the rules apply to what each file actually imports as well as
  * to what its package declares, and a relative import may not leave its own
  * package: every edge between packages has to be a named one the rules can see.
+ *
+ * Node and browsers resolve import specifiers as URLs, where `%2e%2e` means
+ * `..`, a backslash is a slash and a tab is dropped. An import whose spelling
+ * could land somewhere other than the path it reads as is therefore reported
+ * as uncheckable rather than guessed at, and so are URL imports and symbolic
+ * links inside packages.
+ *
+ * This catches accidental crossings and the simple ways round them. It is not
+ * a sandbox: code can still read another package's files at runtime with
+ * `fs`, which review has to catch, not this check.
  */
 import { posix } from 'node:path';
 import ts from 'typescript';
@@ -207,12 +217,36 @@ export function fileImports(source: string, path: string): FileImports {
   return { specifiers, unresolved };
 }
 
+const RELATIVE = /^\.\.?(?:\/|$)/;
+const URL_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+const PLAIN_SEGMENT = /^[A-Za-z0-9._@+~-]*$/;
+
+/**
+ * Why a specifier cannot be checked, or null when it can. Within the plain
+ * characters allowed here, resolving a specifier as a URL and as a path give
+ * the same file, so the path the rules check is the file that would load.
+ */
+export function uncheckableReason(specifier: string): string | null {
+  if (specifier.startsWith('node:')) return null;
+  if (URL_SCHEME.test(specifier)) return 'it names a URL rather than a package or a relative path';
+  const body = specifier.startsWith('#') ? specifier.slice(1) : specifier;
+  const segments = (body.split(/[?#]/, 1)[0] ?? '').split('/');
+  if (!segments.every((segment) => PLAIN_SEGMENT.test(segment))) {
+    return 'it uses characters that can resolve differently as a URL than as a path';
+  }
+  const bare = !RELATIVE.test(specifier) && !specifier.startsWith('/');
+  if (bare && segments.slice(1).some((segment) => segment === '.' || segment === '..')) {
+    return 'it climbs out of the package it names';
+  }
+  return null;
+}
+
 /**
  * The package a bare specifier names (`@scope/name` or `name`), or null for a
  * relative path, an absolute path or a `node:` built-in.
  */
 export function packageName(specifier: string): string | null {
-  if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('node:')) {
+  if (RELATIVE.test(specifier) || specifier.startsWith('/') || specifier.startsWith('node:')) {
     return null;
   }
   const parts = specifier.split('/');
@@ -252,7 +286,9 @@ export interface PackageEscape {
 
 export interface UnresolvedImport {
   file: string;
+  /** The specifier, or the call's source text when its target is not a literal. */
   expression: string;
+  reason: string;
 }
 
 export interface ImportScan {
@@ -260,7 +296,7 @@ export interface ImportScan {
   imports: Map<string, Set<string>>;
   /** Relative or absolute imports that leave the importing file's package. */
   escapes: PackageEscape[];
-  /** `import()` or `require()` calls whose target is not a literal. */
+  /** Imports the rules cannot check, with the reason for each. */
   unresolved: UnresolvedImport[];
 }
 
@@ -276,9 +312,16 @@ export function scanImports(
     const from = owningProject(file.path, projects);
     if (from === undefined) continue;
     const found = fileImports(file.source, file.path);
-    for (const expression of found.unresolved) unresolved.push({ file: file.path, expression });
+    for (const expression of found.unresolved) {
+      unresolved.push({ file: file.path, expression, reason: 'its target is not a literal' });
+    }
     for (const specifier of found.specifiers) {
       if (specifier.startsWith('node:')) continue;
+      const reason = uncheckableReason(specifier);
+      if (reason !== null) {
+        unresolved.push({ file: file.path, expression: specifier, reason });
+        continue;
+      }
       const name = packageName(specifier);
       if (name !== null) {
         const set = imports.get(from.path) ?? new Set<string>();
@@ -297,7 +340,9 @@ export function scanImports(
         });
         continue;
       }
-      const target = posix.normalize(posix.join(posix.dirname(file.path), specifier));
+      // A query or fragment (`./icon.svg?url`) does not change which file loads.
+      const path = specifier.split(/[?#]/, 1)[0] ?? specifier;
+      const target = posix.normalize(posix.join(posix.dirname(file.path), path));
       if (target === '..' || target.startsWith('../')) {
         escapes.push({ file: file.path, specifier, target, from: from.path, into: null });
         continue;
