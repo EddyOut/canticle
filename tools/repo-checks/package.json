@@ -1,0 +1,11 @@
+{
+  "name": "@canticle/repo-checks",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "description": "Repository policy checks run in CI: dependency licenses, package boundaries and DCO sign-off.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}
