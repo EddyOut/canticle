@@ -1,0 +1,45 @@
+name: labels
+
+# Creates or updates the board's labels from .github/labels.json. It never
+# deletes a label, so a label removed from the file must be removed by hand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.json
+      - .github/workflows/labels.yml
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: labels
+  cancel-in-progress: false
+
+jobs:
+  labels:
+    name: labels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Create or update each label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          count=$(jq 'length' .github/labels.json)
+          if [ "${count}" -lt 1 ]; then
+            echo "::error::.github/labels.json lists no labels."
+            exit 1
+          fi
+          jq -c '.[]' .github/labels.json | while read -r label; do
+            name=$(jq -r '.name' <<<"${label}")
+            gh label create "${name}" --repo "${REPO}" --force \
+              --color "$(jq -r '.color' <<<"${label}")" \
+              --description "$(jq -r '.description' <<<"${label}")"
+          done
+          echo "Synced ${count} labels."
