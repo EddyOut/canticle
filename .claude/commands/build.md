@@ -11,8 +11,11 @@ the board on your own. Binding rules: root `CLAUDE.md`. Product spec:
 Repeat until the pool is empty or Paul stops you.
 
 1. **Pull narrowly.** Read every issue, open and closed, with the GitHub tools
-   you have (all pages; the board's order depends on closed blockers too), save
-   the JSON to a file, and run:
+   you have: every page, combined into one file with the board's total count.
+   The board's order depends on closed blockers too, and a missing page drops
+   the oldest issues. The exact recipe is at the top of
+   `tools/board/src/order-cli.ts`; the command refuses input that holds fewer
+   issues than the board's total. Then run:
 
    ```
    pnpm --filter @canticle/board order < issues.json
@@ -72,8 +75,11 @@ Repeat until the pool is empty or Paul stops you.
    template filled in honestly. Commits and the body follow the attribution
    rule in `CLAUDE.md`: no model name anywhere.
 6. **Hand it over; never merge.** Wait for CI and read the actual result. Feed
-   the head's check runs to `pnpm --filter @canticle/board verdict --head
-   <sha>`; a non-zero exit means it is not ready. Then post a hand-over
+   the CI workflow's jobs for your head to `pnpm --filter @canticle/board
+   verdict --head <sha>`; a non-zero exit means it is not ready. Use the
+   workflow-jobs listing, not the check-runs listing, which does not say which
+   commit each run was for; the recipe is at the top of
+   `tools/board/src/verdict-cli.ts`. Then post a hand-over
    comment that names the head SHA and says "over to the Conductor", ending
    with one line of your remaining context. Any later push gets a new comment
    naming the new head. Never apply `conductor-approved`; a red

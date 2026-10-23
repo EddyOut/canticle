@@ -68,8 +68,9 @@ label, and any new push removes the label automatically.
    which must be a hand-over ("over to the Conductor"). If they differ, or the
    last comment is not a hand-over, do not approve; ask on the thread. Green
    on the wrong commit is still green, so this comparison is the gate.
-2. **CI must have reported, not merely be quiet.** Feed the head's check runs
-   to `pnpm --filter @canticle/board verdict --head <sha>`. A non-zero exit
+2. **CI must have reported, not merely be quiet.** Feed the CI workflow's jobs
+   for that head to `pnpm --filter @canticle/board verdict --head <sha>`, as
+   described at the top of `tools/board/src/verdict-cli.ts`. A non-zero exit
    means not ready.
 3. **The review ran at the size the change needed** (see
    `.claude/commands/review.md`), and its findings are fixed or answered.
