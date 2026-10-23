@@ -1,6 +1,11 @@
-# A Canticle for Tomorrow — Project Specification v0.1
+# A Canticle for Tomorrow — Project Specification v0.2
 
-October 22, 2026 · Owner: Paul (Mandorum AI LLC)
+October 23, 2026 · Owner: Paul (Mandorum AI LLC)
+
+Revisions:
+
+- v0.2 (2026-10-23): records Paul's rulings at kickoff. License is GPL-3.0-only with an app-store permission; UI framework is React (ADR-0001); the build order runs steps 1 and 2 in sequence and then in parallel lanes, with review at the phase gates; the Dirt Topo reference is corrected to Dirt Hero.
+- v0.1 (2026-10-22): first draft.
 
 ## Summary and principles
 
@@ -227,7 +232,7 @@ Each calculator shows its formula and cites its source on screen.
 
 ## Trail loadout and maps
 
-Maps reuse the Dirt Topo approach, Capacitor plus PMTiles, without any server. The user draws a box on a map and the app extracts just that region from a remote planet-scale PMTiles archive using HTTP range requests, so nothing is hosted by Mandorum.
+Maps reuse the approach proven in Dirt Hero, MapLibre plus PMTiles, without any server. Dirt Hero is an installable web app rather than a Capacitor app; Paul holds its copyright, so its code may be reused here. The user draws a box on a map and the app extracts just that region from a remote planet-scale PMTiles archive using HTTP range requests, so nothing is hosted by Mandorum.
 
 ### Map stack
 
@@ -418,7 +423,7 @@ Hands-on skills transfer better by video. Phase 3 adds a curated skills video pa
 
 ## Repository and tooling
 
-One public monorepo under a Mandorum GitHub organization, GPLv3, using pnpm workspaces for TypeScript packages and a Go module for the hub.
+One public monorepo under a Mandorum GitHub organization, GPL-3.0-only, using pnpm workspaces for TypeScript packages and a Go module for the hub.
 
 ```
 canticle/
@@ -448,7 +453,7 @@ canticle/
 
 | Layer | Choice |
 | --- | --- |
-| UI | TypeScript, a lightweight framework (Svelte or React; decide in the first ADR), Vite |
+| UI | TypeScript, React 19 with React Aria Components (ADR-0001), Vite |
 | Native shell | Capacitor, current major version |
 | Maps | MapLibre GL JS, pmtiles |
 | ZIM | libzim via Kiwix mobile builds (iOS xcframework, Android AAR) |
@@ -461,9 +466,9 @@ canticle/
 
 ## Licensing and legal
 
-The project is GPLv3, published by Mandorum AI LLC. That keeps it compatible with libzim and kiwix, which are GPL, and matches Kiwix's own App Store distribution.
+The project is licensed GPL-3.0-only, published by Mandorum AI LLC. That keeps it compatible with libzim and kiwix, which are GPL, and matches Kiwix's own App Store distribution.
 
-- Code: GPLv3. Contributors sign off under the Developer Certificate of Origin.
+- Code: GPL-3.0-only, with an additional permission under section 7 for distribution through app stores (`APP-STORE-PERMISSION.md`). The permission covers only code whose copyright holders grant it, so it was added before any code was written. Contributors outside Mandorum sign off under the Developer Certificate of Origin.
 - First Light content: CC BY-SA 4.0 for Mandorum's arrangement and adaptations, with the underlying public-domain sources cited.
 - Third-party content: shown with its own license and attribution from the catalog. Wikipedia and most ZIMs are CC BY-SA; OpenStreetMap is ODbL; USGS data is public domain.
 - AI models: only permissive licenses (Apache 2.0, MIT) in the default catalog.
@@ -514,7 +519,9 @@ Version 1 ships when every criterion below passes on a mid-range iPhone and a mi
 
 ## Build order
 
-1. Repo scaffold, pnpm workspaces, CI, lint and test setup; ADR-001 choosing the UI framework.
+Steps 1 and 2 run in sequence, because everything depends on the scaffold and the schemas. From step 3 on, steps run in parallel lanes wherever they touch different files and their dependencies have landed; two changes to the same files are sequenced. Paul reviews at the phase gates in the roadmap, not at every step (ruled 2026-10-23).
+
+1. Repo scaffold, pnpm workspaces, CI, lint and test setup; ADR-0001 choosing the UI framework.
 2. content-schema: JSON schemas for catalog, pack entries, First Light nodes, role templates and regional fields, with validation tests.
 3. tools/sign and tools/catalog-build; produce a signed catalog with the version 1 packs (Wikipedia no pictures, WikiMed, Army, iFixit, Gutenberg shelf, Tier 1 PDFs) and verify it in core.
 4. core: catalog verification (signature, version), pack state machine, storage budget and advisor logic, all pure TypeScript with tests.
@@ -530,7 +537,7 @@ Version 1 ships when every criterion below passes on a mid-range iPhone and a mi
 
 ## Open items
 
-- [ ] UI framework: Svelte or React (ADR-001, Claude Code proposes; consider consistency with Dirt Topo).
+- [x] UI framework: React (ADR-0001, accepted 2026-10-23).
 - [ ] Topo source: consume an existing published contour and hillshade build, or generate packs from USGS 3DEP.
 - [ ] AI model: benchmark two or three permissive 1 to 4 billion parameter models on a fixed question set.
 - [ ] Gutenberg reading shelf: pick the first 50 titles.
@@ -538,3 +545,4 @@ Version 1 ships when every criterion below passes on a mid-range iPhone and a mi
 - [ ] USPTO and domain checks for the name.
 - [ ] Employment agreement review.
 - [ ] Lawyer review of disclaimer and terms before launch.
+- [ ] App Store distribution of linked third-party GPL code. Mandorum's app-store permission cannot cover libzim (GPL-2.0-or-later) or libkiwix (GPL-3.0), and Apple's terms for apps conflict with the GPL's ban on further restrictions. Before the first App Store submission, obtain written permission from openZIM and Kiwix, or counsel's view that distribution is acceptable without it. Raised in review on 2026-10-23.
