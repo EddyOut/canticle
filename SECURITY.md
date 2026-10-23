@@ -6,6 +6,10 @@ Report security problems privately through GitHub: open this repository's
 **Security** tab and choose **Report a vulnerability**. Do not open a public
 issue, pull request or discussion about it.
 
+If that button is not available, open a public issue titled "Private security
+contact requested" that contains no details of the problem, and a maintainer
+will arrange a private channel with you.
+
 Please include what you found, how to reproduce it, and which version or
 commit you tested.
 

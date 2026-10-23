@@ -51,4 +51,4 @@ pnpm workspaces. Vitest, XCTest, JUnit, Playwright. GitHub Actions for lint, tes
 ## Attribution
 - Commits end with `Co-Authored-By: Claude <noreply@anthropic.com>`, then a `Claude-Session: <link>` line.
 - Pull request bodies end with the platform's generated-with footer and the session link.
-- Nothing pushed names a model: no model name, version or family in a commit message, pull request title or body, code comment, test name or fixture.
+- Nothing pushed names a model: no model name, version or family in a commit message, pull request title or body, code comment, test name or fixture. `Claude` alone, as in the trailer above, names the product and is allowed; what is kept out is anything that identifies which model wrote the change.

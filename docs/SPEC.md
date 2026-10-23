@@ -545,3 +545,4 @@ Steps 1 and 2 run in sequence, because everything depends on the scaffold and th
 - [ ] USPTO and domain checks for the name.
 - [ ] Employment agreement review.
 - [ ] Lawyer review of disclaimer and terms before launch.
+- [ ] App Store distribution of linked third-party GPL code. Mandorum's app-store permission cannot cover libzim (GPL-2.0-or-later) or libkiwix (GPL-3.0), and Apple's terms for apps conflict with the GPL's ban on further restrictions. Before the first App Store submission, obtain written permission from openZIM and Kiwix, or counsel's view that distribution is acceptable without it. Raised in review on 2026-10-23.
