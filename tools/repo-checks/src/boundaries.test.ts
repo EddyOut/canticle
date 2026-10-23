@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   checkBoundaries,
   declaredDependencies,
+  importSpecifiers,
   matchesPackage,
   matchesPath,
+  owningProject,
+  packageName,
   PERSONAL_STORE_PACKAGE,
+  scanImports,
+  withImports,
   type Project,
 } from './boundaries.ts';
 
@@ -117,5 +122,153 @@ describe('declaredDependencies', () => {
 
   it('rejects a manifest that is not an object', () => {
     expect(() => declaredDependencies(null)).toThrow();
+  });
+});
+
+describe('importSpecifiers', () => {
+  it('finds static, dynamic, re-exported, type-only and required imports', () => {
+    const source = [
+      "import a from './a.ts';",
+      "export { b } from '../b.ts';",
+      "import 'side-effect';",
+      "const c = await import('../../packages/personal/store.ts');",
+      "const d = require('@canticle/personal/x');",
+      "import type { E } from '@scope/types';",
+    ].join('\n');
+    expect(importSpecifiers(source)).toEqual([
+      './a.ts',
+      '../b.ts',
+      'side-effect',
+      '../../packages/personal/store.ts',
+      '@canticle/personal/x',
+      '@scope/types',
+    ]);
+  });
+
+  it('ignores imports written in comments and strings', () => {
+    const source = [
+      "// import a from './commented.ts';",
+      'const s = "import b from \'./in-string.ts\'";',
+      'const t = `import c from "./in-template.ts"`;',
+    ].join('\n');
+    expect(importSpecifiers(source)).toEqual([]);
+  });
+});
+
+describe('packageName', () => {
+  it.each([
+    ['react', 'react'],
+    ['react-dom/client', 'react-dom'],
+    ['@canticle/personal', '@canticle/personal'],
+    ['@canticle/personal/store', '@canticle/personal'],
+  ])('reads %j as the package %j', (specifier, name) => {
+    expect(packageName(specifier)).toBe(name);
+  });
+
+  it.each(['./a.ts', '../b.ts', '/abs/c.ts', 'node:fs'])('returns null for %j', (specifier) => {
+    expect(packageName(specifier)).toBeNull();
+  });
+});
+
+describe('owningProject', () => {
+  const projects = [project('', []), project('packages/core', []), project('packages/ui', [])];
+
+  it('picks the deepest project containing the path', () => {
+    expect(owningProject('packages/core/src/index.ts', projects)?.path).toBe('packages/core');
+  });
+
+  it('falls back to the root', () => {
+    expect(owningProject('eslint.config.js', projects)?.path).toBe('');
+  });
+
+  it('does not treat a shared name prefix as containment', () => {
+    expect(owningProject('packages/core-extra/src/x.ts', projects)?.path).toBe('');
+  });
+});
+
+describe('scanImports', () => {
+  const projects = [
+    project('', []),
+    project('packages/core', []),
+    project('packages/personal', []),
+    project('packages/ui', []),
+  ];
+  const file = (path: string, ...lines: string[]) => ({ path, source: lines.join('\n') });
+
+  it('allows relative imports within a package', () => {
+    const scan = scanImports(
+      [file('packages/core/src/a.ts', "import { b } from './b.ts';", "import c from '../c.ts';")],
+      projects,
+    );
+    expect(scan.escapes).toEqual([]);
+  });
+
+  it('reports a relative import into another package', () => {
+    const scan = scanImports(
+      [file('packages/core/src/index.ts', "import { plan } from '../../personal/store.ts';")],
+      projects,
+    );
+    expect(scan.escapes).toEqual([
+      {
+        file: 'packages/core/src/index.ts',
+        specifier: '../../personal/store.ts',
+        target: 'packages/personal/store.ts',
+        from: 'packages/core',
+        into: 'packages/personal',
+      },
+    ]);
+  });
+
+  it('reports a relative import into the root and one leaving the repository', () => {
+    const scan = scanImports(
+      [
+        file(
+          'packages/core/src/index.ts',
+          "import config from '../../../vitest.config.js';",
+          "import secret from '../../../../outside.ts';",
+        ),
+      ],
+      projects,
+    );
+    expect(scan.escapes.map((e) => [e.target, e.into])).toEqual([
+      ['vitest.config.js', ''],
+      ['../outside.ts', null],
+    ]);
+  });
+
+  it('reports an absolute import', () => {
+    const scan = scanImports(
+      [file('packages/core/src/a.ts', "import x from '/etc/x.ts';")],
+      projects,
+    );
+    expect(scan.escapes.map((e) => e.into)).toEqual([null]);
+  });
+
+  it('collects bare imports per project and skips node: built-ins', () => {
+    const scan = scanImports(
+      [
+        file('packages/core/src/a.ts', "import React from 'react';", "import fs from 'node:fs';"),
+        file('packages/core/src/b.ts', "import { x } from '@canticle/personal/store';"),
+        file('packages/ui/src/c.tsx', "import React from 'react';"),
+      ],
+      projects,
+    );
+    expect([...(scan.imports.get('packages/core') ?? [])].sort()).toEqual([
+      '@canticle/personal',
+      'react',
+    ]);
+    expect([...(scan.imports.get('packages/ui') ?? [])]).toEqual(['react']);
+  });
+
+  it('applies the rules to undeclared imports once merged', () => {
+    const scan = scanImports(
+      [file('packages/core/src/a.ts', "import { plan } from '@canticle/personal';")],
+      projects,
+    );
+    expect(
+      checkBoundaries(withImports(projects, scan)).map(
+        (v) => `${v.rule}:${v.path}:${v.dependency}`,
+      ),
+    ).toEqual([`personal-data:packages/core:${PERSONAL_STORE_PACKAGE}`]);
   });
 });

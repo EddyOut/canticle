@@ -1,14 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterAll, describe, expect, it } from 'vitest';
 
 const CLI = join(import.meta.dirname, 'cli.ts');
 const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
 
-function run(command: string, input: string) {
+function run(command: string, input: string, cwd = REPO_ROOT) {
   const result = spawnSync(process.execPath, [CLI, command], {
     input,
-    cwd: REPO_ROOT,
+    cwd,
     encoding: 'utf8',
   });
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
@@ -56,5 +58,67 @@ describe('cli', () => {
 
   it('rejects an unknown command', () => {
     expect(run('nonsense', '').status).toBe(1);
+  });
+});
+
+// The boundary command end to end, against a throwaway workspace on disk.
+describe('cli boundaries', () => {
+  const roots: string[] = [];
+  afterAll(() => {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+  });
+
+  const PACKAGES: Record<string, string> = {
+    '': 'canticle-workspace',
+    'tools/repo-checks': '@canticle/repo-checks',
+    'packages/core': '@canticle/core',
+    'packages/personal': '@canticle/personal',
+  };
+
+  function workspace(sources: Record<string, string>) {
+    const root = mkdtempSync(join(tmpdir(), 'canticle-boundaries-'));
+    roots.push(root);
+    const write = (path: string, text: string) => {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), text);
+    };
+    for (const [path, name] of Object.entries(PACKAGES)) {
+      write(join(path, 'package.json'), JSON.stringify({ name }));
+    }
+    write('packages/personal/src/store.ts', 'export const plan = {};\n');
+    for (const [path, text] of Object.entries(sources)) write(path, text);
+    const listing = Object.entries(PACKAGES).map(([path, name]) => ({
+      name,
+      path: join(root, path),
+    }));
+    return { root, listing: JSON.stringify(listing) };
+  }
+
+  it('fails a relative import from core into the personal store', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts': "import { plan } from '../../personal/src/store.ts';\n",
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('leaves packages/core into packages/personal');
+  });
+
+  it('fails an undeclared import of the personal store from core', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts': "import { plan } from '@canticle/personal';\n",
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(status).toBe(1);
+    expect(output).toContain('depends on or imports @canticle/personal');
+  });
+
+  it('passes a workspace whose imports stay inside their packages', () => {
+    const { root, listing } = workspace({
+      'packages/core/src/index.ts': "import { helper } from './helper.ts';\n",
+      'packages/core/src/helper.ts': 'export const helper = 1;\n',
+    });
+    const { status, output } = run('boundaries', listing, root);
+    expect(output).toContain('no violations');
+    expect(status).toBe(0);
   });
 });

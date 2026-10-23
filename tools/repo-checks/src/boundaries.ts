@@ -13,15 +13,21 @@
  * resolvable from every package, so a forbidden dependency there would bypass
  * the rules for all of them.
  *
- * pnpm only lets a package resolve what it declares (plus the root's
- * dependencies), so checking declared dependencies covers what code can
- * actually import.
+ * A package.json alone does not bound what code can reach. A relative import
+ * such as `../personal/store.ts` crosses into another package without any
+ * declared dependency, and an undeclared bare import can still resolve through
+ * the root. So the rules apply to what each file actually imports as well as
+ * to what its package declares, and a relative import may not leave its own
+ * package: every edge between packages has to be a named one the rules can see.
  */
+import { posix } from 'node:path';
+import ts from 'typescript';
 
 export interface Project {
   name: string;
   /** Path relative to the repository root with forward slashes; '' is the root. */
   path: string;
+  /** Declared dependency names, plus the packages its files import once scanned. */
   dependencies: string[];
 }
 
@@ -137,4 +143,119 @@ export function declaredDependencies(manifest: unknown): string[] {
     }
   }
   return [...names].sort();
+}
+
+/**
+ * Module specifiers a source file imports: static and dynamic imports,
+ * re-exports, type-only imports and `require` calls. TypeScript's own scanner
+ * reads them, so an import written inside a string or a comment is ignored.
+ */
+export function importSpecifiers(source: string): string[] {
+  return ts.preProcessFile(source, true, true).importedFiles.map((file) => file.fileName);
+}
+
+/**
+ * The package a bare specifier names (`@scope/name` or `name`), or null for a
+ * relative path, an absolute path or a `node:` built-in.
+ */
+export function packageName(specifier: string): string | null {
+  if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('node:')) {
+    return null;
+  }
+  const parts = specifier.split('/');
+  return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : (parts[0] ?? null);
+}
+
+/** The project that owns a repository-relative path: the deepest project containing it. */
+export function owningProject<T extends Pick<Project, 'path'>>(
+  path: string,
+  projects: readonly T[],
+): T | undefined {
+  let owner: T | undefined;
+  for (const project of projects) {
+    const contains =
+      project.path === '' || path === project.path || path.startsWith(`${project.path}/`);
+    if (contains && (owner === undefined || project.path.length > owner.path.length))
+      owner = project;
+  }
+  return owner;
+}
+
+export interface SourceFile {
+  /** Path relative to the repository root with forward slashes. */
+  path: string;
+  source: string;
+}
+
+export interface PackageEscape {
+  file: string;
+  specifier: string;
+  /** The path the import resolves to, or the specifier itself if it is absolute. */
+  target: string;
+  from: string;
+  /** The package the import lands in; null when it leaves the repository. */
+  into: string | null;
+}
+
+export interface ImportScan {
+  /** Bare package names imported by each project's files, keyed by project path. */
+  imports: Map<string, Set<string>>;
+  /** Relative or absolute imports that leave the importing file's package. */
+  escapes: PackageEscape[];
+}
+
+export function scanImports(
+  files: readonly SourceFile[],
+  projects: readonly Project[],
+): ImportScan {
+  const imports = new Map<string, Set<string>>();
+  const escapes: PackageEscape[] = [];
+
+  for (const file of files) {
+    const from = owningProject(file.path, projects);
+    if (from === undefined) continue;
+    for (const specifier of importSpecifiers(file.source)) {
+      if (specifier.startsWith('node:')) continue;
+      const name = packageName(specifier);
+      if (name !== null) {
+        const set = imports.get(from.path) ?? new Set<string>();
+        set.add(name);
+        imports.set(from.path, set);
+        continue;
+      }
+
+      if (specifier.startsWith('/')) {
+        escapes.push({
+          file: file.path,
+          specifier,
+          target: specifier,
+          from: from.path,
+          into: null,
+        });
+        continue;
+      }
+      const target = posix.normalize(posix.join(posix.dirname(file.path), specifier));
+      if (target === '..' || target.startsWith('../')) {
+        escapes.push({ file: file.path, specifier, target, from: from.path, into: null });
+        continue;
+      }
+      const into = owningProject(target, projects);
+      if (into !== undefined && into.path !== from.path) {
+        escapes.push({ file: file.path, specifier, target, from: from.path, into: into.path });
+      }
+    }
+  }
+  return { imports, escapes };
+}
+
+/** Each project with the packages its files import added to its dependencies. */
+export function withImports(projects: readonly Project[], scan: ImportScan): Project[] {
+  return projects.map((project) => {
+    const imported = scan.imports.get(project.path);
+    if (imported === undefined) return project;
+    return {
+      ...project,
+      dependencies: [...new Set([...project.dependencies, ...imported])].sort(),
+    };
+  });
 }

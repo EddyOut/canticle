@@ -9,13 +9,44 @@
  * Every command fails when its input measured nothing: an empty report is an
  * instrument failure, never a clean result.
  */
-import { readFileSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
-import { checkBoundaries, declaredDependencies, RULES, type Project } from './boundaries.ts';
+import { readdirSync, readFileSync } from 'node:fs';
+import { extname, join, relative, sep } from 'node:path';
+import {
+  checkBoundaries,
+  declaredDependencies,
+  RULES,
+  scanImports,
+  withImports,
+  type Project,
+  type SourceFile,
+} from './boundaries.ts';
 import { checkSignOffs, parseGitLog } from './dco.ts';
 import { checkLicenses, readPnpmLicenses, type LicenseException } from './licenses.ts';
 
 const SELF_PACKAGE = '@canticle/repo-checks';
+
+const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']);
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage']);
+
+/** Every source file under root, skipping dependencies, build output and dot-directories. */
+function sourceFiles(root: string): SourceFile[] {
+  const files: SourceFile[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile() && SOURCE_EXTENSIONS.has(extname(entry.name))) {
+        files.push({
+          path: relative(root, full).split(sep).join('/'),
+          source: readFileSync(full, 'utf8'),
+        });
+      }
+    }
+  };
+  walk(root);
+  return files;
+}
 
 function readStdin(): string {
   return readFileSync(0, 'utf8');
@@ -73,17 +104,33 @@ function runBoundaries(): void {
     );
   }
 
-  const violations = checkBoundaries(projects);
+  const files = sourceFiles(root);
+  if (files.length === 0) fail('Boundary check found no source files to scan.');
+  const scan = scanImports(files, projects);
+  for (const e of scan.escapes) {
+    const into = e.into === null ? 'outside the repository' : `into ${e.into || 'the root'}`;
+    console.error(
+      `${e.file} imports "${e.specifier}", which leaves ${e.from || 'the root'} ${into}. Import other workspace packages by name.`,
+    );
+  }
+
+  const violations = checkBoundaries(withImports(projects, scan));
   if (violations.length > 0) {
     for (const v of violations) {
       const rule = RULES.find((r) => r.id === v.rule);
       console.error(
-        `${v.project} (${v.path || 'root'}) depends on ${v.dependency}: ${rule?.description ?? v.rule}`,
+        `${v.project} (${v.path || 'root'}) depends on or imports ${v.dependency}: ${rule?.description ?? v.rule}`,
       );
     }
-    fail(`${violations.length} boundary violation(s).`);
   }
-  console.log(`Boundary check: ${projects.length} projects, ${RULES.length} rules, no violations.`);
+  if (violations.length > 0 || scan.escapes.length > 0) {
+    fail(
+      `${violations.length} boundary violation(s), ${scan.escapes.length} import(s) leaving their package.`,
+    );
+  }
+  console.log(
+    `Boundary check: ${projects.length} projects, ${files.length} source files, ${RULES.length} rules, no violations.`,
+  );
 }
 
 function runDco(): void {
