@@ -552,6 +552,45 @@ describe('the actionable count says how much of itself is claimable', () => {
   });
 });
 
+describe('--conflicts', () => {
+  const claimed = (number: number, territory: string) =>
+    issue(number, `**Blocked by:** none\n**Territory:** ${territory}`, [
+      'build',
+      'priority:tier-2',
+      'status:in-progress',
+    ]);
+  const board = (...issues: Record<string, unknown>[]) =>
+    JSON.stringify({ issues, totalCount: issues.length });
+
+  it('exits 1 and names the issue sharing files', { timeout: 30_000 }, () => {
+    const result = run(
+      board(claimed(70, 'packages/core/src/a.ts'), claimed(71, 'packages/core/')),
+      '--conflicts',
+      '70',
+    );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('#70 shares packages/core/src/a.ts with in-progress #71');
+  });
+
+  it('exits 0 when nothing in progress shares its files', { timeout: 30_000 }, () => {
+    const result = run(
+      board(claimed(72, 'packages/core/'), claimed(73, 'packages/ui/')),
+      '--conflicts',
+      '#72',
+    );
+    expect(result.status).toBe(0);
+  });
+
+  it(
+    'exits 2 for an issue missing from the input, which is not a clear',
+    { timeout: 30_000 },
+    () => {
+      expect(run(board(claimed(74, 'a.ts')), '--conflicts', '99').status).toBe(2);
+      expect(run(board(claimed(74, 'a.ts')), '--conflicts').status).toBe(2);
+    },
+  );
+});
+
 describe('the 30 s timeout on spawned tests is on disk', () => {
   /**
    * Walked by regex over this file rather than introspected: each

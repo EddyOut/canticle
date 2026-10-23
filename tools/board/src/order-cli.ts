@@ -27,6 +27,7 @@
  *
  *   pnpm --filter @canticle/board order < issues.json
  *   pnpm --filter @canticle/board order --verbose < issues.json   # names them
+ *   pnpm --filter @canticle/board order --conflicts 42 < issues.json   # after claiming #42
  *
  * THE WHOLE BOARD, CLOSED ISSUES INCLUDED. order.ts treats a blocker it cannot
  * find as unresolved, deliberately, so that a typo cannot read as "nothing
@@ -61,6 +62,7 @@ import {
   fullyDeclared,
   isBuildable,
   selectActionable,
+  territoryConflicts,
   type BoardIssue,
   type Selection,
   type SkipReason,
@@ -300,8 +302,44 @@ function main(): void {
   // A flag, not a subcommand, and off by default: the counts are always
   // printed; the numbers behind them are what the Conductor backfilling
   // markers needs and a lane pulling its next issue does not.
+  const conflictsAt = process.argv.indexOf('--conflicts');
+  if (conflictsAt !== -1) {
+    process.exit(reportConflicts(issues, process.argv[conflictsAt + 1]));
+  }
   const verbose = process.argv.includes('--verbose') || process.argv.includes('-v');
   console.log(report(selectActionable(issues), issues, { verbose }));
+}
+
+/**
+ * `--conflicts <issue>`: the check a lane runs right after labelling its claim
+ * in progress. Exit 0 = no other in-progress issue shares its files; exit 1 =
+ * one does, so release the claim and pull again; exit 2 = the question could
+ * not be answered, which is not a clear.
+ */
+function reportConflicts(issues: readonly BoardIssue[], arg: string | undefined): number {
+  const number = Number(arg?.replace(/^#/, ''));
+  if (!Number.isInteger(number) || number <= 0) {
+    console.error('board order: --conflicts needs an issue number, e.g. --conflicts 42');
+    return 2;
+  }
+  let conflicts: { number: number; paths: string[] }[];
+  try {
+    conflicts = territoryConflicts(issues, number);
+  } catch (cause) {
+    console.error(`board order: ${cause instanceof Error ? cause.message : String(cause)}`);
+    return 2;
+  }
+  if (conflicts.length === 0) {
+    console.log(`#${number}: no other in-progress issue shares its territory.`);
+    return 0;
+  }
+  for (const conflict of conflicts) {
+    console.log(
+      `#${number} shares ${conflict.paths.join(', ')} with in-progress #${conflict.number}.`,
+    );
+  }
+  console.log('Release the claim, drop status:in-progress, and pull again.');
+  return 1;
 }
 
 // Only when run, never on import: the tests import `parseIssues` and `report`

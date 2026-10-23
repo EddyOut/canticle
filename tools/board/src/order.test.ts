@@ -7,6 +7,7 @@ import {
   plannedOrder,
   selectActionable,
   territoriesOverlap,
+  territoryConflicts,
   type BoardIssue,
 } from './order.ts';
 
@@ -399,5 +400,48 @@ describe('fullyDeclared', () => {
   it('is false when a marker cannot be read', () => {
     expect(fullyDeclared(issue('**Blocked by:** none.\n**Territory:** `a.ts`'))).toBe(false);
     expect(fullyDeclared(issue('**Blocked by:** none\n**Territory:** ()'))).toBe(false);
+  });
+});
+
+describe('territoryConflicts', () => {
+  const inProgress = (number: number, territory: string): BoardIssue => ({
+    ...issue(
+      number,
+      '2026-08-24T00:00:00Z',
+      2,
+      `**Blocked by:** none\n**Territory:** ${territory}`,
+    ),
+    labels: ['build', 'priority:tier-2', 'status:in-progress'],
+  });
+
+  it('names another in-progress issue sharing files, with the shared paths', () => {
+    const mine = inProgress(60, 'packages/core/src/catalog/verify.ts, packages/core/src/a.ts');
+    const theirs = inProgress(61, 'packages/core/src/catalog/');
+    expect(territoryConflicts([mine, theirs], 60)).toEqual([
+      { number: 61, paths: ['packages/core/src/catalog/verify.ts'] },
+    ]);
+  });
+
+  it('sees the conflict from either side, so the second lane to label always yields', () => {
+    const a = inProgress(62, 'packages/ui/src/');
+    const b = inProgress(63, 'packages/ui/src/App.tsx');
+    expect(territoryConflicts([a, b], 62).map((c) => c.number)).toEqual([63]);
+    expect(territoryConflicts([a, b], 63).map((c) => c.number)).toEqual([62]);
+  });
+
+  it('ignores issues that are not in progress, or closed', () => {
+    const mine = inProgress(64, 'packages/core/');
+    const waiting = issue(
+      65,
+      '2026-08-24T00:00:00Z',
+      1,
+      '**Blocked by:** none\n**Territory:** packages/core/',
+    );
+    const done = { ...inProgress(66, 'packages/core/'), state: 'closed' as const };
+    expect(territoryConflicts([mine, waiting, done], 64)).toEqual([]);
+  });
+
+  it('refuses an issue that is not in the input', () => {
+    expect(() => territoryConflicts([inProgress(67, 'a.ts')], 99)).toThrow(/#99/);
   });
 });

@@ -38,10 +38,24 @@ Repeat until the pool is empty or Paul stops you.
    tools/claim-issue.sh <issue> <lane-name>    # exit 0: yours. Non-zero: not yours.
    ```
 
-   If it exits non-zero, take the next issue. Only after it succeeds, add
-   `status:in-progress` and a claim comment; those are the visible record, not
-   the lock. A claim expires after four hours. Release it when you finish or
-   stop: `tools/claim-issue.sh --release <issue> <lane-name>`.
+   If it exits non-zero, another lane has it: pull the board again and re-run
+   the order before choosing, because the list you had is now out of date.
+
+   If it succeeds, add `status:in-progress` straight away, then pull the board
+   again and run:
+
+   ```
+   pnpm --filter @canticle/board order --conflicts <issue> < issues.json
+   ```
+
+   A claim locks the issue number, not its files, so another lane can win a
+   different issue that shares your territory. If the check exits 1, release
+   the claim, drop the label, and pull again. Whichever of two racing lanes
+   labels second always sees the first, so yielding on any conflict means two
+   lanes never both work in the same files. Only after the check exits 0, add
+   the claim comment and start. The label and comment are the visible record,
+   not the lock. A claim expires after four hours. Release it when you finish
+   or stop: `tools/claim-issue.sh --release <issue> <lane-name>`.
 3. **Read the current code first.** Fetch `main` and read what is actually
    there before writing anything.
 4. **Implement** on a branch named `build/<issue>-<slug>` off the latest

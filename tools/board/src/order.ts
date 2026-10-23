@@ -180,6 +180,36 @@ function compare(
 }
 
 /**
+ * Other in-progress issues whose territory overlaps the given issue's, with the
+ * overlapping paths. A claim locks an issue number, not its files, so two lanes
+ * reading the same board can win claims on different issues that share files.
+ * A lane therefore runs this right after labelling its own claim in progress
+ * and yields if it finds anything: whichever of two racing lanes labels second
+ * is certain to see the first, so the two never both proceed into the same
+ * files. Both may yield; neither can be wrong.
+ */
+export function territoryConflicts(
+  issues: readonly BoardIssue[],
+  number: number,
+): { number: number; paths: string[] }[] {
+  const mine = issues.find((issue) => issue.number === number);
+  if (mine === undefined) throw new Error(`issue #${number} is not in the input`);
+  const myPaths = declaredValues(territory(mine.body));
+  return issues
+    .filter((issue) => issue.number !== number && issue.state === 'open' && holdsTerritory(issue))
+    .map((issue) => {
+      const held = declaredValues(territory(issue.body));
+      return {
+        number: issue.number,
+        paths: myPaths.filter((path) =>
+          held.some((heldPath) => territoriesOverlap(heldPath, path)),
+        ),
+      };
+    })
+    .filter((conflict) => conflict.paths.length > 0);
+}
+
+/**
  * What a lane may take RIGHT NOW.
  *
  * Blocking and territory are answered differently on purpose. A blocker that
