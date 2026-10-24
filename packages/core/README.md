@@ -10,8 +10,10 @@ code act on them. That keeps every rule here testable with plain values, and
 lets the same logic run in the app and in the browser version the Phase 3
 hub serves.
 
-The typecheck holds core to that: its `tsconfig.json` loads no Node or DOM
-types, so `node:fs`, `fetch`, `process` and `document` do not compile here.
+That is a rule, not something the typecheck enforces: core's tsconfig loads
+Node's types like every other package, because modules need `TextEncoder`,
+`URL` and the like, and tests read fixture files. Review holds the line for
+now, and a lint check on core's non-test source will once it lands.
 
 ## Modules
 
