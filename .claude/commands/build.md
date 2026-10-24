@@ -32,6 +32,14 @@ Repeat until the pool is empty or Paul stops you.
    `status:in-progress`, `status:blocked`, `decision` or `owner-action`, and
    anything whose territory another lane holds. Finish the item you are on
    before re-sorting.
+
+   **Free abandoned claims first.** A lane that stops without releasing
+   leaves its issue labelled `status:in-progress`, which the order skips and
+   whose files it keeps reserved, even after the claim expires. So for each
+   issue labelled `status:in-progress`, run `tools/claim-issue.sh --status
+   <issue>`. If it reports EXPIRED and the issue has no open pull request,
+   remove `status:in-progress`, comment that the claim expired and the issue
+   is back in the pool, and pull the board again.
 2. **Claim it, exclusively, before anything else:**
 
    ```

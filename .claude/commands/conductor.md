@@ -22,6 +22,11 @@ Release the claim with `--release` when you are done.
 
 1. **Read the board narrowly**, by label family: `status:triage` first, then
    `decision` and `owner-action`, then the `build` pool. Never dump every issue.
+   **Reconcile abandoned claims** while you are there: for each issue labelled
+   `status:in-progress`, check `tools/claim-issue.sh --status <issue>`. An
+   EXPIRED claim with no open pull request belongs to a lane that stopped:
+   remove the label and comment that the issue is back in the pool, or its
+   files stay reserved and the order never offers it again.
 2. **Triage new intake at the lowest level that fits:** answer it inline;
    route it to one role; label it `build`; or, rarely, split it into per-role
    questions. Check that a scoped item still serves Paul's goal before

@@ -178,7 +178,7 @@ function describe(reason: SkipReason): string {
     case 'territory':
       return `territory shared with #${reason.sharedWith}: ${reason.paths.join(', ')}`;
     case 'claimed':
-      return 'claimed by another lane';
+      return 'in progress or blocked (if in progress, check its claim with tools/claim-issue.sh --status)';
     case 'malformed':
       return `malformed ${reason.field}: ${reason.rejected.join(', ')}`;
     case 'not-build':

@@ -512,7 +512,7 @@ describe('the actionable count says how much of itself is claimable', () => {
     );
     const out = report(selectActionable(issues), issues);
     expect(out).toContain('actionable, best first (1; 1 claimable, 0 un-assessed):');
-    expect(out).toContain('#41 — claimed by another lane');
+    expect(out).toContain('#41 — in progress or blocked');
   });
 
   /* Verbose names them; the default run does not, or the short report stops
