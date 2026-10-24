@@ -1,0 +1,23 @@
+{
+  "name": "@canticle/content-schema",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "description": "Schemas and validators for pack entries, presets, role templates and First Light trees, published as JSON Schema.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas/*": "./schemas/*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "schemas": "node src/schemas-cli.ts && prettier --write schemas"
+  },
+  "dependencies": {
+    "typebox": "1.3.36"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "typescript": "~6.0.3"
+  }
+}
