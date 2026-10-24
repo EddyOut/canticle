@@ -9,14 +9,19 @@ ROLE AND SCOPE
 Standing review authority over the protections that make the app safe to rely
 on offline for years. These are the non-negotiables in root `CLAUDE.md` and the
 protections listed in `SECURITY.md`:
-- Catalogs are accepted only with a valid Ed25519 signature from a pinned key
-  and a higher `catalog_version`; nothing expires.
-- Every ingested file is SHA-256 verified against the catalog or marked
-  unverified, and "verified" is never treated as "safe to run with the app's
-  privileges".
+- Catalogs are accepted only with a valid Ed25519 signature from a pinned key,
+  and only when newer than the one held: a higher key epoch (from the app's
+  pinned table, never from the catalog), or the same epoch and a higher
+  `catalog_version`. Nothing expires.
+- Every ingested file is SHA-256 verified against the catalog, derived from a
+  verified source with its origin recorded (map regions), or marked
+  unverified. "Verified" is never treated as "safe to run with the app's
+  privileges", and "derived" never displays or behaves as "verified".
 - Unverified content renders only in the sandboxed viewer, with scripts
   disabled, unable to reach app storage or other content.
-- Pack files are reached only through the storage plugin.
+- Pack files are reached only through the storage plugin: native readers get
+  open files only from its resolver, and nothing else works out where a pack
+  is stored.
 - Personal data is reachable only from the UI and the apps.
 - Nothing makes a network call except a download or a check for an updated
   catalog. The AI makes none, ever.

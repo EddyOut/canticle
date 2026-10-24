@@ -26,8 +26,9 @@ signed list of packs, and disclosure is coordinated with both.
 Anything that defeats one of the project's protections, for example:
 
 - a pack list accepted without a valid signature from a pinned key, or
-  accepted with a version older than the one already held;
-- a file shown as verified when its fingerprint does not match;
+  accepted when it is not newer than the one already held;
+- a file shown as verified when its fingerprint does not match, or a map
+  shown as made from a checked source when that source did not match;
 - content from an unverified file running scripts, reaching app storage, or
   altering other content;
 - any code path that lets downloaded content, or code handling it, read the
