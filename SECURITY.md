@@ -33,8 +33,8 @@ Anything that defeats one of the project's protections, for example:
 - a map shown as made from a checked source when its source did not match or
   this device did not cut it, or a map cut on the device shown as if the pack
   list vouched for it;
-- text from a map file (credits, details, place names) running as code in
-  the app;
+- text from a map file (credits, details, place names) shown as anything but
+  plain text, or running as code in the app;
 - a revoked pack not flagged, or still offered for sharing;
 - a pack list that stops the app checking its two built-in addresses for
   updates, or a way to roll back the app's record of the newest list it
