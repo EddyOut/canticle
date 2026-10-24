@@ -72,6 +72,19 @@ remote_claim_sha() {
   git ls-remote "$REMOTE" "refs/heads/claim/$1" 2>/dev/null | awk '{print $1}'
 }
 
+# THE HOLDER TOKEN. A lane name is chosen by whoever starts the session, so two
+# sessions can share one ("conductor", or two lanes started from the same
+# handoff). Ownership is therefore also recorded per checkout: a random token
+# kept in this clone's git directory, written into every claim this checkout
+# makes, and required to release one. CLAIM_TOKEN overrides it.
+holder_token() {
+  if [ -n "${CLAIM_TOKEN:-}" ]; then printf '%s' "$CLAIM_TOKEN"; return; fi
+  local file
+  file="$(git rev-parse --git-common-dir)/canticle-claim-token"
+  if [ ! -s "$file" ]; then od -An -N16 -tx1 /dev/urandom | tr -d ' \n' > "$file"; fi
+  cat "$file"
+}
+
 claim_body() {
   git log -1 --format='%s' "$1" 2>/dev/null || true
 }
@@ -255,6 +268,12 @@ case "${1:-}" in
       "claim #$issue by $lane at "*) ;;
       *) echo "REFUSED: #$issue is not held by $lane."; report_holder "$issue"; exit 1 ;;
     esac
+    # The lane name matches, but a lane name can be shared; the holder token
+    # says whether THIS checkout made the claim.
+    if ! git log -1 --format=%B "refs/claims/$issue" | grep -qxF "holder $(holder_token)"; then
+      echo "REFUSED: #$issue is held by $lane from another session, not this one."
+      report_holder "$issue"; exit 1
+    fi
     # THE TOMBSTONE, pushed where a deletion would go.
     #
     # Parented on the CLAIM COMMIT rather than on main, which buys a second
@@ -311,6 +330,7 @@ now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # told they won. The nonce sits in the body, so the subject every reader
 # parses is unchanged.
 nonce="$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+token="$(holder_token)"
 
 # A push that exits 0 is not proof of ownership, for the same reason: an
 # "up to date" push also succeeds. The claim is ours only if the remote ref
@@ -323,7 +343,7 @@ owns_claim() {
 # Empty on purpose: it must never be mistaken for work, and it must never be
 # merged.
 claim_sha="$(git commit-tree "$base^{tree}" -p "$base" \
-  -m "claim #$issue by $lane at $now (base $base)" -m "attempt $nonce")"
+  -m "claim #$issue by $lane at $now (base $base)" -m "attempt $nonce" -m "holder $token")"
 
 # THE ATOMIC STEP. Deliberately not --force and never --force-with-lease here:
 # this must fail when the ref exists, which is what makes it a lock.
@@ -397,7 +417,7 @@ fi
 # holds it NOW) behind history nobody is reading.
 old_body="$(claim_body "refs/claims/$issue" | sed 's/ superseding:.*//')"
 takeover_sha="$(git commit-tree "$base^{tree}" -p "$base" \
-  -m "claim #$issue by $lane at $now (base $base) superseding: $old_body" -m "attempt $nonce")"
+  -m "claim #$issue by $lane at $now (base $base) superseding: $old_body" -m "attempt $nonce" -m "holder $token")"
 if git push -q --force-with-lease="refs/heads/claim/$issue:$held_sha" \
      "$REMOTE" "$takeover_sha:refs/heads/claim/$issue" 2>/dev/null \
    && owns_claim "$issue" "$takeover_sha"; then

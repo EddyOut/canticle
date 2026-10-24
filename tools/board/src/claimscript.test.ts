@@ -642,3 +642,32 @@ describe('two attempts that would build the same claim commit', () => {
     expect(second.out).not.toContain('CLAIMED: #31');
   });
 });
+
+describe('release is bound to the session that made the claim, not just its lane name', () => {
+  it('refuses an old session releasing a takeover made under the same lane name', () => {
+    const first = runScript(['33', 'conductor'], { CLAIM_TOKEN: 'session-a' });
+    expect(first.code).toBe(0);
+    // The first session's claim goes stale; a second session, using the same
+    // lane name, takes it over.
+    const takeover = runScript(['33', 'conductor'], {
+      CLAIM_TOKEN: 'session-b',
+      CLAIM_TTL_HOURS: '0',
+    });
+    expect(takeover.code).toBe(0);
+    expect(takeover.out).toContain('took over stale claim');
+
+    const stale = runScript(['--release', '33', 'conductor'], { CLAIM_TOKEN: 'session-a' });
+    expect(stale.code).not.toBe(0);
+    expect(stale.out).toContain('from another session');
+    expect(claimTool('--status', '33').out).toContain('HELD: #33');
+
+    const owner = runScript(['--release', '33', 'conductor'], { CLAIM_TOKEN: 'session-b' });
+    expect(owner.code).toBe(0);
+    expect(owner.out).toContain('RELEASED: #33');
+  });
+
+  it('lets the same checkout release its own claim without being told a token', () => {
+    expect(claimTool('34', 'ash').code).toBe(0);
+    expect(claimTool('--release', '34', 'ash').out).toContain('RELEASED: #34');
+  });
+});
