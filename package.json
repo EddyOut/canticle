@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "test": "vitest run",
     "check:licenses": "pnpm licenses list --json | node tools/repo-checks/src/cli.ts licenses",
     "check:boundaries": "pnpm -r ls --json --depth -1 | node tools/repo-checks/src/cli.ts boundaries",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:licenses && pnpm check:boundaries"

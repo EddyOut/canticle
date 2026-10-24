@@ -1,0 +1,49 @@
+name: conductor-gate
+
+# Only the Conductor merges (CLAUDE.md). Every session shares one GitHub
+# account, so required reviews cannot tell reviewer from author; this check
+# can. It is red on every pull request until the `conductor-approved` label is
+# applied, and applying that label is the Conductor's merge ritual alone.
+#
+# An approval covers only the head it was given: a new push removes the label
+# before judging, so a head the Conductor never saw cannot ride a stale
+# approval to green. The decision lives in .github/scripts/conductor-gate.sh,
+# which reads the pull request's current labels and head rather than the
+# event's snapshot.
+#
+# pull_request_target runs this file from the base branch with a token that
+# can edit labels, which pull requests from forks need. It is safe here only
+# because this workflow never checks out or runs code from the pull request
+# (the checkout below is the base branch), and never interpolates text an
+# author controls into a shell command. Keep it that way.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: conductor-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  conductor-gate:
+    name: conductor-gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # pull_request_target checks out the BASE branch, so this is the
+      # reviewed copy of the script, never the pull request's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: The Conductor has approved this head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: .github/scripts/conductor-gate.sh

@@ -31,6 +31,20 @@ pnpm workspaces. Vitest, XCTest, JUnit, Playwright. GitHub Actions for lint, tes
 - One coordinating session (the Conductor) triages, routes work and brings decisions to Paul. It does not write code. Build sessions implement. Step 1 is built in the kickoff session at Paul's direction; its last part lands the board, claim and merge tooling the split depends on.
 - Decisions that belong to Paul (product scope, principles, anything the spec leaves open) go to him with the options, a recommendation and the reason. Record his ruling on the issue with the date and his words.
 
+## The board and the lanes
+- Sessions start with `/conductor` (coordinates, never writes code) or `/build` (implements). `/review` runs the review panel. Their rules are in `.claude/commands/`; read the one you are running in full.
+- The board is GitHub Issues. Status comes from labels (defined in `.github/labels.json`), never from a hand-kept field, and closed always means done.
+- Every `build` issue carries a `priority:tier-N` label and, above its first `##` heading, a `**Blocked by:**` line and a `**Territory:**` line. `pnpm --filter @canticle/board order` derives the build order from them.
+- A lane claims an issue with `tools/claim-issue.sh` before touching it. The claim is a pushed ref, so exactly one lane wins; the label and comment are only the visible record.
+- Only the Conductor merges. The `conductor-gate` check stays red until the Conductor applies `conductor-approved`, and any new push removes that label. Protected paths and who signs off on them are listed in `.claude/commands/conductor.md`.
+- Standing roles are sub-agents in `.claude/agents/`: `trust-steward` (the non-negotiables), `content-steward` (First Light fidelity) and `adversary` (review lenses). One level deep: a sub-agent never invokes another.
+
+## Parallel work
+- Fan out by default. Split work by the files it touches, not by its size: changes that meet in the same file are sequenced.
+- Every sub-agent gets this repository's absolute path, works in its own worktree off `origin/main`, and is told to ignore the `CLAUDE.md` of any other repository the session can see.
+- The dispatching session keeps the judgement. A sub-agent's report is evidence, not a decision, and a sub-agent saying "tests pass" is a claim until the dispatching session runs them.
+- Carry the house rules into every dispatch: the non-negotiables, the attribution rule and the verification bar. A sub-agent does not read this file unless told to.
+
 ## Working rules
 - Record architecture decisions as ADRs in docs/adr/, starting from 0000-template.md.
 - docs/ holds the project's durable knowledge. Changes to it go in their own pull request, never mixed with code. A docs change may record a decision Paul has made; it may not make one.

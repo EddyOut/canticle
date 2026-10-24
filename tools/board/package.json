@@ -1,0 +1,13 @@
+{
+  "name": "@canticle/board",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "description": "Board tooling for build lanes: the pull order from issue markers, the claim model, and the CI verdict a lane checks before handing a pull request over.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "order": "node src/order-cli.ts",
+    "verdict": "node src/verdict-cli.ts"
+  }
+}

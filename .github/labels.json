@@ -1,0 +1,26 @@
+[
+  { "name": "build", "color": "1d76db", "description": "Code work a build lane can take" },
+  { "name": "decision", "color": "d93f0b", "description": "Needs a ruling from Paul" },
+  {
+    "name": "owner-action",
+    "color": "b60205",
+    "description": "Something only Paul can do: settings, devices, keys, accounts"
+  },
+  { "name": "gate", "color": "5319e7", "description": "A phase gate check from docs/SPEC.md" },
+  { "name": "status:triage", "color": "fbca04", "description": "Not yet triaged by the Conductor" },
+  {
+    "name": "status:in-progress",
+    "color": "0e8a16",
+    "description": "A lane holds this now; other lanes skip it"
+  },
+  { "name": "status:blocked", "color": "e99695", "description": "Blocked; the issue says on what" },
+  { "name": "priority:tier-1", "color": "b60205", "description": "Highest priority" },
+  { "name": "priority:tier-2", "color": "d93f0b", "description": "High priority" },
+  { "name": "priority:tier-3", "color": "fbca04", "description": "Normal priority" },
+  { "name": "priority:tier-4", "color": "c2e0c6", "description": "Low priority" },
+  {
+    "name": "conductor-approved",
+    "color": "0e8a16",
+    "description": "The Conductor verified this head; applied only by the Conductor"
+  }
+]
