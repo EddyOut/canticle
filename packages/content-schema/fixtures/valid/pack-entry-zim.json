@@ -29,6 +29,10 @@
       "overlaps": [
         {
           "id": "example_med_en"
+        },
+        {
+          "id": "example_med_en_extra",
+          "variant": "maxi"
         }
       ]
     },

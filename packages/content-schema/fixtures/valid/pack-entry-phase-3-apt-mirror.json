@@ -1,0 +1,20 @@
+{
+  "schema": "pack-entry",
+  "about": "A Phase 3 format (apt-mirror): the schema carries it, though no version 1 code opens it.",
+  "value": {
+    "id": "example_apt_mirror",
+    "variant": "bookworm-main-partial",
+    "version": "2026-10",
+    "title": "Example partial package mirror",
+    "description": "Stored and verified on this phone, served by the hub.",
+    "format": "apt-mirror",
+    "urls": ["https://archive.example.org/apt-mirror/bookworm-main-partial.bin"],
+    "size_bytes": 107374182400,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "GPL-3.0-only",
+    "attribution": "Example Project",
+    "tiers": ["fiat-lux"],
+    "phases": ["root", "forge"],
+    "topics": ["computing"]
+  }
+}

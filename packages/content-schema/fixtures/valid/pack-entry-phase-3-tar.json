@@ -1,0 +1,20 @@
+{
+  "schema": "pack-entry",
+  "about": "A Phase 3 format (tar): the schema carries it, though no version 1 code opens it.",
+  "value": {
+    "id": "example_tar",
+    "variant": "x86_64",
+    "version": "2026-10",
+    "title": "Example compiler toolchain",
+    "description": "Stored and verified on this phone, served by the hub.",
+    "format": "tar",
+    "urls": ["https://archive.example.org/tar/x86_64.bin"],
+    "size_bytes": 524288000,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "GPL-3.0-only",
+    "attribution": "Example Project",
+    "tiers": ["fiat-lux"],
+    "phases": ["root", "forge"],
+    "topics": ["computing"]
+  }
+}

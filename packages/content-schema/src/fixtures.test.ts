@@ -10,19 +10,24 @@ describe('valid fixtures pass', () => {
     it(`${fixture.file}: ${fixture.about}`, () => {
       const result = validatorFor(fixture)(fixture.value);
       expect(result.ok ? [] : result.issues).toEqual([]);
+      // Asserted on its own too: a validator rejecting with no reasons would
+      // pass the line above.
+      expect(result.ok).toBe(true);
     });
   }
 });
 
 describe('invalid fixtures fail, naming the field', () => {
   for (const fixture of invalid) {
-    const expected = (fixture.issues ?? []).map((i) => i.path).sort();
+    const expected = [...new Set((fixture.issues ?? []).map((i) => i.path))].sort();
     it(`${fixture.file} → ${expected.map((p) => p || '(document)').join(', ')}`, () => {
       const result = validatorFor(fixture)(fixture.value);
       expect(result.ok).toBe(false);
       const issues = result.ok ? [] : result.issues;
       // Exactly these fields: a correct field buried in noise is not naming it.
-      expect(issues.map((i) => i.path).sort()).toEqual(expected);
+      // One field can carry more than one reason (an address can break two
+      // rules), so the fields are compared as a set.
+      expect([...new Set(issues.map((i) => i.path))].sort()).toEqual(expected);
       for (const issue of issues) expect(issue.message).toMatch(/\S/);
     });
   }
@@ -58,6 +63,9 @@ describe('the fixtures cover what issue 19 asks for', () => {
       'pack-entry-bad-tier.json',
       'pack-entry-relation-bare-string.json',
       'first-light-node-no-sources.json',
+      'first-light-question-no-sources.json',
+      'first-light-source-http-url.json',
+      'first-light-long-cycle.json',
       'first-light-source-no-edition.json',
       'first-light-next-nowhere.json',
       'first-light-cycle.json',

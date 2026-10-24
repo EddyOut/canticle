@@ -35,8 +35,8 @@
             "url": "https://publisher.example.org/source.pdf"
           }
         ],
-        "phase": "first-light",
-        "medical": false,
+        "phase": "hold",
+        "medical": true,
         "options": [
           {
             "label": "Next",
@@ -56,7 +56,7 @@
             "url": "https://publisher.example.org/source.pdf"
           }
         ],
-        "phase": "first-light",
+        "phase": "root",
         "medical": false,
         "items": ["First example item", "Second example item"],
         "options": [
@@ -78,7 +78,7 @@
             "url": "https://publisher.example.org/source.pdf"
           }
         ],
-        "phase": "first-light",
+        "phase": "forge",
         "medical": false,
         "reviewedBy": "Example Reviewer",
         "reviewedOn": "2026-10-24"

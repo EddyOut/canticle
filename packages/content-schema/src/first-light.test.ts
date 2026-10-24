@@ -41,6 +41,28 @@ describe('the tree checks', () => {
     ]);
   });
 
+  it('report a loop through three nodes', () => {
+    expect(checkTree(tree('a', node('a', 'b'), node('b', 'c'), node('c', 'a')))).toEqual([
+      {
+        path: 'nodes[2].options[0].next',
+        message: 'leads back to "a", making a loop: a → b → c → a',
+      },
+    ]);
+  });
+
+  it('report a loop through four nodes that starts below the start node', () => {
+    expect(
+      checkTree(
+        tree('s', node('s', 'a'), node('a', 'b'), node('b', 'c'), node('c', 'd'), node('d', 'a')),
+      ),
+    ).toEqual([
+      {
+        path: 'nodes[4].options[0].next',
+        message: 'leads back to "a", making a loop: a → b → c → d → a',
+      },
+    ]);
+  });
+
   it('report a loop among nodes nothing reaches, as well as the unreachable nodes', () => {
     expect(checkTree(tree('a', node('a'), node('x', 'y'), node('y', 'x')))).toEqual([
       { path: 'nodes[1]', message: '"x" cannot be reached from the start node "a"' },

@@ -4,6 +4,7 @@
   "value": {
     "id": "medic",
     "title": "Medic",
+    "description": "What a community medic carries.",
     "packs": [
       {
         "id": "example_med_en"
