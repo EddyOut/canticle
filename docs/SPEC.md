@@ -4,7 +4,7 @@ October 24, 2026 · Owner: Paul (Mandorum AI LLC)
 
 Revisions:
 
-- v0.3 (2026-10-24): records Paul's Phase 0 rulings. Catalog keys are ordered by epoch, with custody simplified to two keys (#4). Older apps skip catalog entries they cannot use (#5). Map regions cut on the device are a third verification class, "derived", with an origin record that travels inside the map file (#6). Fingerprints come from the publisher where published, drift is checked weekly, and the catalog has two independent addresses (#7). Native readers get open files only from the storage plugin's resolver, enforced by an automatic check (#8). The supported floor is Capacitor's own (#9).
+- v0.3 (2026-10-24): records Paul's Phase 0 rulings. Catalog keys are ordered by epoch, with custody simplified to two keys (#4). Older apps skip catalog entries they cannot use (#5). Map regions cut on the device are a third verification class, "derived", with an origin record that travels inside the map file (#6). Fingerprints come from the publisher where published, drift is checked weekly, and the catalog has two independent addresses (#7). Native readers get file handles only from the storage plugin's resolver, with an automatic check on native code to follow (#8). The supported floor is Capacitor's own (#9).
 - v0.2 (2026-10-23): records Paul's rulings at kickoff. License is GPL-3.0-only with an app-store permission; UI framework is React (ADR-0001); the build order runs steps 1 and 2 in sequence and then in parallel lanes, with review at the phase gates; the Dirt Topo reference is corrected to Dirt Hero.
 - v0.1 (2026-10-22): first draft.
 
@@ -32,7 +32,7 @@ The product serves three situations with one codebase: everyday preparedness (wi
 1. No hosted content. Mandorum hosts only the signed catalog and the app's own software releases. All content is fetched by the client directly from its upstream publisher or mirror.
 2. Offline is the normal case. Every feature except downloading must work with no network, indefinitely.
 3. Foolproof over clever. Any flow a non-technical person must complete takes three taps or fewer and uses no jargon. Security is invisible or it is cut.
-4. Integrity is non-negotiable and invisible. Every pack is verified against its catalog fingerprint automatically. Unverified content is allowed but labeled, never silently trusted.
+4. Integrity is non-negotiable and invisible. Every pack is verified against its catalog fingerprint automatically; a map region cut on the device is checked against its pinned source instead (see Verification rules). Unverified content is allowed but labeled, never silently trusted.
 5. User choice. Users decide what to download, including sources outside the catalog. The default catalog stays conservative; user-added sources are their call.
 6. Plan for the device dying. Paper export, hub serving and peer sharing exist because phones run out of power and app stores disappear.
 7. Attribute everything. Every piece of content shows its source and license.
@@ -69,17 +69,17 @@ One TypeScript UI runs inside a Capacitor shell on iOS and Android, with native 
 Components and data flow:
 
 - Upstream publishers (Kiwix mirrors, Protomaps, USGS, Hugging Face): packs are fetched directly over HTTPS; nothing is hosted by Mandorum.
-- Mandorum catalog: signed JSON on GitHub Pages listing sources, sizes, hashes and licenses.
+- Mandorum catalog: signed JSON at two independent addresses (see Hosting) listing sources, sizes, hashes and licenses.
 - Phone app (Capacitor, iOS and Android):
     - Shared UI: library by phase, First Light, calculators, maps, AI, print.
     - Core logic: catalog signature and version check; pack states, budget, swaps, advisor.
     - Personal store: plan, notes, bookmarks, medical info; never read by any sharing code.
-    - Storage plugin: internal, external and (Phase 3) hub backends.
+    - Storage plugin: internal and external backends, and the native resolver that hands other plugins file handles.
     - Reader plugin: libzim read, search, render.
     - AI plugin: llama.cpp, grounded answers.
 - Storage targets: internal storage (phone memory, microSD), external drive (USB-C SSD via Files), community hub (Phase 3: Go + kiwix-serve, which also serves the same UI to browsers).
 
-The hub is Phase 3; the storage interface and shared UI are built now so it slots in without rework.
+The hub is Phase 3; the reader interface and shared UI are built now so it slots in without rework.
 
 ### Client tiers
 
@@ -123,10 +123,10 @@ The catalog root also holds `schema_version` (major and minor), `catalog_version
     - A catalog is newer if its key's epoch is higher, or the epoch is the same and its `catalog_version` is higher. A device that holds a catalog from a higher epoch never accepts one from a lower epoch again, at any version. This is how a lost or stolen primary is retired, so catalog keys have no revocation list.
     - No expiry checks: devices may be offline for years.
 2. A pack is marked verified only if its SHA-256 matches a catalog entry. Hashing runs in the background after download or import.
-3. A map region cut on the device is derived, not verified (ruled 2026-10-24, #6). The extractor checks the source archive's header and root directory against the fingerprints the catalog pins for that source before cutting, and refuses on a mismatch. It fetches only from the catalog's addresses over HTTPS, and records an origin record inside the map file: source pack and version, the pinned header fingerprint, bounding box, zoom range, extractor version, date and a SHA-256 of the tile data. The record travels with the file however it is shared, so a receiving device can confirm the copy is intact. A derived map is shown as coming from its named source, with no warning badge, and never displays or behaves as verified. Accepted risk: individual tiles rest on HTTPS from the pinned source, not on a catalog fingerprint; tiles are drawing data, not script.
+3. A map region cut on the device is derived, not verified (ruled 2026-10-24, #6). The extractor checks the source archive's header and root directory against the fingerprints the catalog pins for that source before cutting, and refuses on a mismatch. It fetches only from the catalog's addresses over HTTPS, and records an origin record inside the map file: source pack and version, the pinned header fingerprint, bounding box, zoom range, extractor version, date and a SHA-256 of the tile data. After cutting, the app hashes the finished map and keeps that fingerprint, so later copies and swaps of it are verified against it like any other pack, including the protection for the last copy. A derived map is shown as coming from its named source, with no warning badge, and is never shown as catalog-verified. Accepted risk: individual tiles rest on HTTPS from the pinned source, not on a catalog fingerprint; tiles are drawing data, not script, so a tampered tile could mislead but could not reach the app, its storage or personal data. The record travels with the file however it is shared, so a receiving device can confirm the copy arrived intact and see its stated origin. Offline, a receiving device cannot re-check a shared map against the source archive; how a shared map is labelled is decided when sharing is built (Phase 2).
 4. Unverified packs remain readable with a plain warning badge and are always rendered in a sandbox (see Reader).
 5. Revoked packs, and in Phase 3 revoked hub keys, listed in the newest catalog are flagged and never offered for sharing.
-6. Older apps read newer catalogs (ruled 2026-10-24, #5). The root carries `schema_version`, and an app accepts any catalog whose major version it knows. Within it, an entry the app cannot use (an unknown format, or `min_app_version` above the app's own) is skipped, never fatal, and never offered for download; unknown fields are ignored. Signatures, the version ordering and revocations apply even when entries are skipped. A major version the app does not know is refused: the app keeps the catalog it holds and tells the user, in plain words, to update the app. `tools/catalog-build` validates strictly. Safety rule for catalog authors: a change an older app must not ignore is never a plain new field. It goes behind `min_app_version` on the affected entries, which older apps then skip, or behind a major `schema_version` bump.
+6. Older apps read newer catalogs (ruled 2026-10-24, #5). The root carries `schema_version`, and an app accepts any catalog whose major version it knows. Within it, an entry the app cannot use (an unknown format, or `min_app_version` above the app's own) is skipped, never fatal, and never offered for download; unknown fields are ignored. The signature covers the whole document, and the version ordering and revocations apply even when entries are skipped. A major version the app does not know is refused: the app keeps the catalog it holds and tells the user, in plain words, to update the app. `tools/catalog-build` validates strictly. Safety rule for catalog authors: a change an older app must not ignore is never a plain new field. It goes behind `min_app_version` on the affected entries, which older apps then skip, or behind a major `schema_version` bump.
 
 ### Fingerprints and upstream drift
 
@@ -143,10 +143,10 @@ Ruled 2026-10-24 (#4): as simple as possible, with no bank vault and no carried 
 
 - Two Ed25519 keys, each kept in one place.
 - The primary signing key: encrypted, in Paul's password manager, nowhere else.
-- The reserved key: an encrypted copy on paper, kept apart from the primary. Its passphrase is kept separately from the paper copy, including in Paul's succession instructions, so the project can continue if he cannot.
+- The reserved key: encrypted and kept offline, apart from the primary. Its passphrase is kept separately from it, including in Paul's succession instructions, so the project can continue if he cannot.
 - The app pins both public keys with their epochs. If the primary is lost or stolen, Paul signs with the reserved key and every device accepts it; the next app release pins a new reserve. Users see nothing.
 - Signing is a local script run at release time (`canticle-sign catalog.json`); no CI secrets. Format compatible with minisign so anyone can verify by hand.
-- Community hubs never touch this key. Hub and owner keys live in each phone's secure hardware (Phase 3).
+- Community hubs never touch these keys. Hub and owner keys live in each phone's secure hardware (Phase 3).
 
 ## Storage and pack manager
 
@@ -158,16 +158,17 @@ The reader never assumes a file sits on internal storage. Every pack on the devi
 | --- | --- | --- |
 | Internal | 1 | iOS Application Support, excluded from iCloud backup; Android app-specific storage, with microSD as an option |
 | External | 1 | Files chosen through the system document picker; iOS security-scoped bookmarks, Android Storage Access Framework; detect stale bookmarks and re-prompt plainly |
-| Remote hub | 3 | Not a byte-level storage backend: libzim cannot read over HTTP, so packs on a hub are read through a second implementation of the reader interface (`@canticle/zim`) backed by kiwix-serve. Its type is defined now, implemented later |
 
-Interface sketch: `stat(packRef)`, `list()`, `copy(from, to, onProgress)`, `remove(packRef)`, with `packRef = {packId, variant, version, backend, locator}`. TypeScript code sees pack references, never paths.
+A community hub (Phase 3) is not a storage backend: libzim cannot read over HTTP, so packs on a hub are read through a second implementation of the reader interface (`@canticle/zim`) backed by kiwix-serve. The `hub` value of `backend` is defined now and implemented later.
 
-Native readers (ruled 2026-10-24, #8): the storage plugin owns where each pack lives, copying, hashing and verification state. It exposes a native resolver, in Swift and Kotlin, in the same process and never across the Capacitor bridge, that hands the other native plugins (the reader, the AI and the map tile handler) an open file for a pack reference, and only for packs in a readable state. No other code works out where a pack is stored. A `tools/repo-checks` check flags any file-opening call in native code outside the resolver.
+Interface sketch: `stat(packRef)`, `list()`, `copy(from, to, onProgress)`, `remove(packRef)`, with `packRef = {packId, variant, version, backend, locator}`. TypeScript code sees pack references, never paths; `locator` is opaque to it. Content shown in the WebView (articles, PDF and EPUB, map tiles) is served to it by native code that gets its file from the resolver.
+
+Native readers (ruled 2026-10-24, #8): the storage plugin owns where each pack lives, copying, hashing and verification state. It exposes a native resolver, in Swift and Kotlin, in the same process and never across the Capacitor bridge, that hands the other native plugins (the reader, the AI and the map tile handler) an open file for a pack reference, and only for packs in a readable state. No other code builds a path to a pack. An automatic check in `tools/repo-checks` (#64, not yet built) will flag any file-opening call in Swift or Kotlin outside the resolver, with a reviewed exception list, and lands before the first native reader.
 
 ### Pack manager responsibilities
 
 - Downloads: resumable, Wi-Fi only by default, background transfers (iOS `URLSession` background, Android `WorkManager`), mirror failover, essentials first in the queue.
-- Verification: SHA-256 after every download, import or copy; states are `downloading`, `verifying`, `verified`, `unverified`, `failed`, `stale`.
+- Verification: SHA-256 after every download, import or copy; states are `downloading`, `verifying`, `verified`, `unverified`, `failed`, `stale`, and `derived` for a map region cut on the device (see Verification rules).
 - Selection: presets, custom picks, variant swaps, and a storage budget that shows what fits against free space.
 - Advisor: when space runs short, suggest specific downgrades with the space each saves, using catalog sizes and relations.
 - Import: accept ZIM, PMTiles, PDF and EPUB from the Files app, external drives or other apps; match by hash to a catalog entry or mark unverified.
@@ -198,7 +199,7 @@ The native apps read ZIM files through Kiwix's mobile builds of libzim, wrapped 
 - `suggest(archiveId, prefix)` for title autocomplete
 - `getMetadata(archiveId)` for title, language, license and article count
 
-PDF and EPUB packs open in a built-in viewer through the same storage interface.
+PDF and EPUB packs open in a built-in viewer, with their bytes served by native code through the storage resolver.
 
 ### Rendering
 
@@ -259,7 +260,7 @@ Maps reuse the approach proven in Dirt Hero, MapLibre plus PMTiles, without any 
 - Renderer: MapLibre GL JS in the WebView, reading local PMTiles through the `pmtiles` protocol handler.
 - Basemap source: Protomaps planet builds (OpenStreetMap data, ODbL attribution displayed).
 - Topo: contours and hillshade from public-domain USGS 3DEP elevation data, packaged as PMTiles. Whether to consume an existing published build or generate contour packs is an open item.
-- Region extract: port the extract logic from go-pmtiles to TypeScript, or run it in a small native helper; it fetches only the tiles inside the bounding box and zoom range chosen. Before cutting, it checks the source's pinned header and root-directory fingerprints, and it writes the origin record into the extract's own metadata, so a region stays checkable when shared (see Verification rules, rule 3).
+- Region extract: port the extract logic from go-pmtiles to TypeScript, or run it in a small native helper; it fetches only the tiles inside the bounding box and zoom range chosen. Before cutting, it checks the source's pinned header and root-directory fingerprints, and it writes the origin record into the extract's own metadata, so a receiving device can confirm a shared copy is intact (see Verification rules, rule 3).
 - Size preview before download, computed from the archive directory.
 - GPX import and export; display tracks and waypoints; no turn-by-turn navigation.
 - Location: the device's GPS works without a network; show position, coordinates in decimal degrees and UTM, elevation and a compass.
@@ -327,7 +328,7 @@ The hub is built in Phase 3, but version 1 code must not block it. The hub is a 
 
 ### Rules version 1 code must follow
 
-1. All pack access goes through the storage interface, and native readers get open files only from its resolver. The hub slots in later as a second implementation of the reader interface.
+1. All pack access goes through the storage interface, and native readers get file handles only from its resolver. The hub slots in later as a second implementation of the reader interface.
 2. The catalog schema already carries `relations`, `lineage`, `topics`, `region` and role templates.
 3. UI code is plain web technology inside Capacitor, with native features behind plugins, so the same UI can be served by the hub as a PWA and to plain browsers.
 4. Personal data (household plan, notes, bookmarks, inventory) lives in a separate store that no sharing code path can read.
@@ -515,7 +516,7 @@ Phases follow the user's phases of need, with one exception: offline maps and on
 
 Version 1 ships when every criterion below passes on a mid-range iPhone and a mid-range Android phone in airplane mode.
 
-Supported systems (ruled 2026-10-24, #9): Capacitor's own floor, which for Capacitor 8 is iOS 15 and Android 7 (API level 24). Features that need more check at runtime and step aside. If a new Capacitor major version raises its floor, the move is brought to Paul before the app moves. The reference phones are being chosen (#65): a mid-range Android, and a mid-range iPhone with 6 GB of memory, so the AI warning path is tested. Paul's iPhone 18 serves development and the Phase 0 gate on iOS, not acceptance timings.
+Supported systems (ruled 2026-10-24, #9): Capacitor's own floor, which for Capacitor 8 is iOS 15 and Android 7 (API level 24). Features that need more check at runtime and step aside. If a new Capacitor major version raises its floor, the move is brought to Paul before the app moves. The reference phones are not yet named; Paul is choosing them (#65). Paul has an iPhone 18 for testing now.
 
 ### Functional
 

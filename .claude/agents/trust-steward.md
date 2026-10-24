@@ -14,14 +14,15 @@ protections listed in `SECURITY.md`:
   pinned table, never from the catalog), or the same epoch and a higher
   `catalog_version`. Nothing expires.
 - Every ingested file is SHA-256 verified against the catalog, derived from a
-  verified source with its origin recorded (map regions), or marked
-  unverified. "Verified" is never treated as "safe to run with the app's
-  privileges", and "derived" never displays or behaves as "verified".
+  verified source with its lineage recorded, or marked unverified. "Verified"
+  is never treated as "safe to run with the app's privileges". A derived map
+  is never shown as catalog-verified, but its copies and swaps are verified
+  against its own fingerprint and its last copy is protected like any pack.
 - Unverified content renders only in the sandboxed viewer, with scripts
   disabled, unable to reach app storage or other content.
 - Pack files are reached only through the storage plugin: native readers get
-  open files only from its resolver, and nothing else works out where a pack
-  is stored.
+  file handles only from its resolver, and nothing else builds a path to a
+  pack.
 - Personal data is reachable only from the UI and the apps.
 - Nothing makes a network call except a download or a check for an updated
   catalog. The AI makes none, ever.
