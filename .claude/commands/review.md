@@ -46,7 +46,7 @@ reports.
    state set from an awaited result lack a check that it is still current?
    Does the app tell the user something that may not be true: "verified",
    "saved", "downloaded", "works offline"?
-3. **Data safety.** What can this change lose: a pack, the last verified copy,
+3. **Data safety.** What can this change lose: a pack, the last verified or derived copy,
    a half-finished download, the household plan, notes? Can the user tell that
    it was lost?
 4. **Trust rules.** Dispatch `trust-steward`. Applies whenever the change

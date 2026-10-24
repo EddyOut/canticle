@@ -43,8 +43,8 @@ Mandorum's behalf and do not carry a sign-off.
   it is unchanged.
 - No new dependency whose license is incompatible with `GPL-3.0-only`. Ask
   in the issue before adding any dependency you are unsure about.
-- No secrets, keys or personal data. The catalog signing key never enters the
-  repository.
+- No secrets, keys or personal data. The catalog signing keys never enter
+  the repository.
 - User-facing text in plain words. The words hash, certificate, ZIM, catalog
   and loadout never appear on a screen a user acts on.
 
