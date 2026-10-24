@@ -6,12 +6,12 @@ Full specification: docs/SPEC.md. Architecture decisions: docs/adr/. Read the sp
 ## Non-negotiables
 - Never host or proxy content. Clients fetch packs from upstream URLs in the signed catalog.
 - Everything except downloading works offline, indefinitely. No telemetry, no accounts, no analytics SDKs.
-- All pack access goes through packages/plugins/storage. Native readers get file handles only from its resolver, and nothing else builds a path to a pack.
-- Every ingested file is SHA-256 verified against the catalog, derived from a verified source with its lineage recorded, or marked unverified.
+- All pack access goes through packages/plugins/storage. Native readers get open files only from its resolver, which finds each pack in its own records. Nothing else works out where a pack is stored, and TypeScript code sees pack references, never paths.
+- Every ingested file is SHA-256 verified against the catalog, derived, or marked unverified. Derived means a map region this device cut itself after checking its source against the catalog, with its origin recorded; an origin record in a file the device did not cut is a claim, not a check.
 - Unverified content renders only in the sandboxed viewer with scripts disabled.
 - Personal data (plan, notes, bookmarks, medical info) lives in its own store; sharing code must never import it.
-- Catalogs: accept only valid Ed25519 signatures from pinned keys, and only a newer catalog: a higher key epoch (from the app's pinned table, never from the catalog), or the same epoch and a higher catalog_version. No expiry checks.
-- Swaps copy and verify before deleting. Never delete the last verified copy without explicit user confirmation.
+- Catalogs: accept only valid Ed25519 signatures from pinned keys, and only a newer catalog: one signed by a key with a higher epoch, whatever its catalog_version, or by the same epoch with a higher catalog_version. A lower epoch is refused at any version. The epoch is the one the app's pinned table gives the key the signature verified against, never anything the catalog or its signature file says. No expiry checks.
+- Swaps copy and verify before deleting. Never delete the last verified or derived copy without explicit user confirmation.
 - First Light content cites its source on every node. Never invent medical numbers, doses or ratios.
 - The AI answers from the library with citations; anything else is labeled as general model knowledge. No network calls from the AI, ever.
 - User-facing text: plain words, no jargon (no hash, ZIM, certificate, catalog, loadout). Three taps or fewer for core flows.
@@ -54,7 +54,7 @@ pnpm workspaces. Vitest, XCTest, JUnit, Playwright. GitHub Actions for lint, tes
 - iOS code cannot be built in Linux build sessions. For native work, CI on GitHub's macOS runners is the automated check, and each native pull request lists the on-device checks Paul needs to run.
 - Prefer small, reviewable commits with clear messages.
 - Ask before adding any dependency whose license is not compatible with GPL-3.0-only.
-- Never commit secrets or signing keys. The catalog signing key lives outside the repo, and Paul signs catalogs on his own machine.
+- Never commit secrets or signing keys. The catalog signing keys live outside the repo, and Paul signs catalogs on his own machine.
 
 ## Public repository
 - Everything pushed here is public. No personal data, phone numbers, addresses or private correspondence in code, docs, issues or pull requests.

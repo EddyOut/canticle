@@ -53,14 +53,16 @@ green.
 
 HOUSE RULES — check every one, every time
 - The non-negotiables in `CLAUDE.md`, all of them. In particular: pack files
-  are reached only through the storage plugin, native readers get file
-  handles only from its resolver, and nothing else builds a path to a pack;
-  every ingested file is verified, derived from a verified source with its
-  lineage recorded, or marked unverified;
+  are reached only through the storage plugin, native readers get open files
+  only from its resolver, and nothing else works out where a pack is stored;
+  every ingested file is verified, derived (a map region this device cut
+  itself after checking its source), or marked unverified;
   unverified content runs no scripts and is kept apart;
   personal data is imported only by the UI and the apps; nothing makes a
-  network call except a download; swaps never lose the last verified copy
-  without explicit confirmation.
+  network call except a download; swaps never lose the last verified or
+  derived copy without explicit confirmation; catalogs are accepted only
+  from pinned keys and only when newer, by the epoch of the key the
+  signature verified against.
 - "Verified" means the bytes match the signed list. It does not mean the
   content is safe to run with the app's privileges. Flag any code that treats
   it that way.

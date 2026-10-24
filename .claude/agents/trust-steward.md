@@ -10,24 +10,29 @@ Standing review authority over the protections that make the app safe to rely
 on offline for years. These are the non-negotiables in root `CLAUDE.md` and the
 protections listed in `SECURITY.md`:
 - Catalogs are accepted only with a valid Ed25519 signature from a pinned key,
-  and only when newer than the one held: a higher key epoch (from the app's
-  pinned table, never from the catalog), or the same epoch and a higher
-  `catalog_version`. Nothing expires.
-- Every ingested file is SHA-256 verified against the catalog, derived from a
-  verified source with its lineage recorded, or marked unverified. "Verified"
-  is never treated as "safe to run with the app's privileges". A derived map
-  is never shown as catalog-verified, but its copies and swaps are verified
-  against its own fingerprint and its last copy is protected like any pack.
+  and only when newer than the one held: signed by a key with a higher epoch,
+  whatever its `catalog_version`, or by the same epoch with a higher
+  `catalog_version`. A lower epoch is refused at any version. The epoch is the
+  one the pinned table gives the key the signature verified against, never
+  anything the catalog or its signature file says. Nothing expires.
+- Every ingested file is SHA-256 verified against the catalog, derived, or
+  marked unverified. Derived means a map region this device cut itself after
+  checking its source against the catalog; an origin record in a file the
+  device did not cut is a claim, not a check. "Verified" is never treated as
+  "safe to run with the app's privileges". A derived map is never shown as
+  catalog-verified; its copies are checked against its own fingerprint and
+  keep the derived state.
 - Unverified content renders only in the sandboxed viewer, with scripts
   disabled, unable to reach app storage or other content.
 - Pack files are reached only through the storage plugin: native readers get
-  file handles only from its resolver, and nothing else builds a path to a
-  pack.
+  open files only from its resolver, which finds each pack in its own records
+  and never opens a locator, path or URL that arrives across the bridge.
+  Nothing else works out where a pack is stored.
 - Personal data is reachable only from the UI and the apps.
 - Nothing makes a network call except a download or a check for an updated
   catalog. The AI makes none, ever.
-- Swaps copy and verify before deleting; the last verified copy is never
-  deleted without explicit confirmation.
+- Swaps copy and verify before deleting; the last verified or derived copy is
+  never deleted without explicit confirmation.
 - Signing keys never enter the repository; signing never runs in CI.
 
 CONTEXT SOURCES — read before producing anything
