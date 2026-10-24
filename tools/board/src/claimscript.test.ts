@@ -591,3 +591,54 @@ describe('release writes a tombstone instead of deleting', () => {
     expect(claimTool('575', 'ash').code).toBe(1);
   });
 });
+
+describe('two attempts that would build the same claim commit', () => {
+  /**
+   * Two sessions with the same lane name and git identity, claiming from the
+   * same base in the same second. Without something unique per attempt, both
+   * build the identical commit, the second push is an "up to date" no-op, and
+   * both are told they won. Time is pinned (git's dates and `date` itself) so
+   * the collision is deterministic.
+   */
+  function pinnedClock(): NodeJS.ProcessEnv {
+    const bin = join(root, 'clock');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, 'date'),
+      '#!/usr/bin/env bash\ncase "$*" in *%s*) echo 1798070400 ;; *) echo 2026-12-24T00:00:00Z ;; esac\n',
+      { mode: 0o755 },
+    );
+    chmodSync(join(bin, 'date'), 0o755);
+    return {
+      ...withShim(bin),
+      GIT_AUTHOR_DATE: '2026-12-24T00:00:00Z',
+      GIT_COMMITTER_DATE: '2026-12-24T00:00:00Z',
+    };
+  }
+
+  it('does not trust a push that exits 0 but leaves the remote without the claim', () => {
+    // A push can succeed without creating the ref ("up to date"), so success
+    // alone is not ownership: the remote has to name this attempt's commit.
+    const bin = join(root, 'silent-push');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, 'git'),
+      `#!/usr/bin/env bash\nif [ "$1" = "push" ]; then exit 0; fi\nexec ${realGit()} "$@"\n`,
+      { mode: 0o755 },
+    );
+    chmodSync(join(bin, 'git'), 0o755);
+    const result = runScript(['32', 'lane'], withShim(bin));
+    expect(result.code).not.toBe(0);
+    expect(result.out).not.toContain('CLAIMED: #32');
+  });
+
+  it('lets exactly one of them win', () => {
+    const clock = pinnedClock();
+    const first = runScript(['31', 'conductor'], clock);
+    const second = runScript(['31', 'conductor'], clock);
+    expect(first.code).toBe(0);
+    expect(first.out).toContain('CLAIMED: #31');
+    expect(second.code).not.toBe(0);
+    expect(second.out).not.toContain('CLAIMED: #31');
+  });
+});

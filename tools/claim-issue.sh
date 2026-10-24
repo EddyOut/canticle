@@ -305,15 +305,30 @@ git fetch -q "$REMOTE" main
 base="$(git rev-parse "$REMOTE/main")"
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+# A NONCE PER ATTEMPT. Two sessions with the same lane name, git identity and
+# base, claiming in the same second, would otherwise build the identical
+# commit, and the second push would succeed as an "up to date" no-op: both
+# told they won. The nonce sits in the body, so the subject every reader
+# parses is unchanged.
+nonce="$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+
+# A push that exits 0 is not proof of ownership, for the same reason: an
+# "up to date" push also succeeds. The claim is ours only if the remote ref
+# now names this attempt's own commit.
+owns_claim() {
+  [ "$(remote_claim_sha "$1")" = "$2" ]
+}
+
 # The claim commit: an empty commit on main's tree carrying who and when.
 # Empty on purpose: it must never be mistaken for work, and it must never be
 # merged.
 claim_sha="$(git commit-tree "$base^{tree}" -p "$base" \
-  -m "claim #$issue by $lane at $now (base $base)")"
+  -m "claim #$issue by $lane at $now (base $base)" -m "attempt $nonce")"
 
 # THE ATOMIC STEP. Deliberately not --force and never --force-with-lease here:
 # this must fail when the ref exists, which is what makes it a lock.
-if git push -q "$REMOTE" "$claim_sha:refs/heads/claim/$issue" 2>/dev/null; then
+if git push -q "$REMOTE" "$claim_sha:refs/heads/claim/$issue" 2>/dev/null \
+   && owns_claim "$issue" "$claim_sha"; then
   echo "CLAIMED: #$issue by $lane at $now (base $base)"
   exit 0
 fi
@@ -346,7 +361,8 @@ if is_tombstone "$issue" "$held_body"; then
   # carries the right subject, and building a second one would be a second
   # place for the format to drift.
   if git push -q --force-with-lease="refs/heads/claim/$issue:$held_sha" \
-       "$REMOTE" "$claim_sha:refs/heads/claim/$issue" 2>/dev/null; then
+       "$REMOTE" "$claim_sha:refs/heads/claim/$issue" 2>/dev/null \
+     && owns_claim "$issue" "$claim_sha"; then
     echo "CLAIMED: #$issue by $lane at $now (base $base) — it had been released"
     exit 0
   fi
@@ -381,9 +397,10 @@ fi
 # holds it NOW) behind history nobody is reading.
 old_body="$(claim_body "refs/claims/$issue" | sed 's/ superseding:.*//')"
 takeover_sha="$(git commit-tree "$base^{tree}" -p "$base" \
-  -m "claim #$issue by $lane at $now (base $base) superseding: $old_body")"
+  -m "claim #$issue by $lane at $now (base $base) superseding: $old_body" -m "attempt $nonce")"
 if git push -q --force-with-lease="refs/heads/claim/$issue:$held_sha" \
-     "$REMOTE" "$takeover_sha:refs/heads/claim/$issue" 2>/dev/null; then
+     "$REMOTE" "$takeover_sha:refs/heads/claim/$issue" 2>/dev/null \
+   && owns_claim "$issue" "$takeover_sha"; then
   echo "CLAIMED: #$issue by $lane at $now — took over stale claim: $old_body"
   exit 0
 fi
