@@ -27,7 +27,8 @@ protections listed in `SECURITY.md`:
 - Pack files are reached only through the storage plugin: native readers get
   open files only from its resolver, which finds each pack in its own records
   and never opens a locator, path or URL that arrives across the bridge.
-  Nothing else works out where a pack is stored.
+  Nothing else works out where a pack is stored, and TypeScript code sees
+  pack references, never paths.
 - Personal data is reachable only from the UI and the apps.
 - Nothing makes a network call except a download or a check for an updated
   catalog. The AI makes none, ever.

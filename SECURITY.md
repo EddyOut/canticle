@@ -29,10 +29,16 @@ Anything that defeats one of the project's protections, for example:
   accepted when it is not newer than the one already held (newer means signed
   by a later key in the app's own order, or by the same key with a higher
   version number);
-- a file shown as verified when its fingerprint does not match, or a map
-  shown as made from a checked source when that source did not match, when
-  this device did not cut it, or shown as verified;
-- a revoked pack still offered for download or sharing;
+- a file shown as verified when its fingerprint does not match;
+- a map shown as made from a checked source when its source did not match or
+  this device did not cut it, or a map cut on the device shown as if the pack
+  list vouched for it;
+- text from a map file (credits, details, place names) running as code in
+  the app;
+- a revoked pack not flagged, or still offered for sharing;
+- a pack list that stops the app checking its two built-in addresses for
+  updates, or a way to roll back the app's record of the newest list it
+  accepted;
 - content from an unverified file running scripts, reaching app storage, or
   altering other content;
 - any code path that lets downloaded content, or code handling it, read the
