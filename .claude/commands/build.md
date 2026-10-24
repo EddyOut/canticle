@@ -76,6 +76,14 @@ Repeat until the pool is empty or Paul stops you.
      pass" is a claim; you running the command is evidence.
    - **If `main` looks red, suspect your setup first.** Reproduce on a clean
      worktree off `origin/main` before calling anything pre-existing.
+   - **The lockfile is never territory.** `pnpm-lock.yaml` is never declared
+     as territory and never edited by hand. Every lane that adds a package or
+     a dependency changes it, even when their real work never meets.
+     - **On a conflict** after merging `main` into your branch, take `main`'s
+       copy (`git checkout origin/main -- pnpm-lock.yaml`), run `pnpm install`
+       to regenerate it, then run the full bar again before pushing.
+     - **The same rule** covers any other file a tool generates from the
+       package list.
    - **Before you report a check as passed, name what would make it fail and
      confirm the check can say so.** A command that answers a nearby question
      looks exactly like confirmation.
