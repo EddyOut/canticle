@@ -160,10 +160,22 @@ export function checkTree(tree: FirstLightTree): Issue[] {
   return issues;
 }
 
+declare const treeChecked: unique symbol;
+
+/**
+ * A tree that passed the schema and the tree checks. Only
+ * validateFirstLightTree makes one, so code that takes a CheckedFirstLightTree
+ * cannot be handed a tree that skipped the checks: a plain FirstLightTree,
+ * which the schema alone describes, does not type-check in its place.
+ */
+export type CheckedFirstLightTree = FirstLightTree & { readonly [treeChecked]: true };
+
 /** The schema first, then the tree checks, which assume a well-formed tree. */
-export function validateFirstLightTree(value: unknown): Result<FirstLightTree> {
+export function validateFirstLightTree(value: unknown): Result<CheckedFirstLightTree> {
   const result = validate(FirstLightTreeSchema, value);
   if (!result.ok) return result;
   const issues = checkTree(result.value);
-  return issues.length === 0 ? result : { ok: false, issues };
+  return issues.length === 0
+    ? { ok: true, value: result.value as CheckedFirstLightTree }
+    : { ok: false, issues };
 }

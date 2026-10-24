@@ -61,7 +61,10 @@ try {
   codeGenerationBlocked = error instanceof EvalError;
 }
 
-// Loaded only now, after the traps, so anything the package does on import is seen.
+// Loaded only now, after the traps, so anything the package does on import is
+// seen. The entry point first: it is what the app imports, and it can reach
+// modules the fixtures never load.
+await import('./index.ts');
 const { loadFixtures, validatorFor } = await import('./fixtures.ts');
 
 const run = (kind: 'valid' | 'invalid') =>

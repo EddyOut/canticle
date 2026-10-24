@@ -15,6 +15,8 @@ const fixture = (name: string): Record<string, unknown> =>
 
 const issues = (result: Result<unknown>): Issue[] => (result.ok ? [] : result.issues);
 
+const CAPPED = 'may have more problems: checking stops after 8, so fix these and check again';
+
 const without = (record: Record<string, unknown>, key: string): Record<string, unknown> =>
   Object.fromEntries(Object.entries(record).filter(([k]) => k !== key));
 
@@ -36,7 +38,36 @@ describe('validation messages name the field and the reason', () => {
 
   it('explains a pattern in words, from the schema description', () => {
     expect(issues(validatePackEntry({ ...pack, urls: ['http://a.example.org/x.zim'] }))).toEqual([
-      { path: 'urls[0]', message: 'must be an https:// address with a host name and no spaces' },
+      { path: 'urls[0]', message: 'must be an address that starts with https://' },
+    ]);
+  });
+
+  it('names the one rule an address breaks', () => {
+    const reason = (url: string) => issues(validatePackEntry({ ...pack, urls: [url] }));
+    expect(reason('https://user:secret@a.example.org/x')).toEqual([
+      {
+        path: 'urls[0]',
+        message: 'must be an address with no user name or password before the host',
+      },
+    ]);
+    expect(reason('https://[::1]/x')).toEqual([
+      {
+        path: 'urls[0]',
+        message: 'must be an address whose host is a name such as mirror.example.org',
+      },
+    ]);
+    expect(reason('https://a.example.org:99999/x')).toEqual([
+      {
+        path: 'urls[0]',
+        message: 'must be an address whose port, if it has one, is a number from 1 to 65535',
+      },
+    ]);
+    expect(reason('https://a.example.org/x y')).toEqual([
+      {
+        path: 'urls[0]',
+        message:
+          'must be an address made of URL characters only: no spaces, anything else percent-encoded',
+      },
     ]);
   });
 
@@ -68,16 +99,49 @@ describe('validation messages name the field and the reason', () => {
     ]);
   });
 
-  it('names every unknown field even when they alone fill the error limit', () => {
+  it('names the unknown fields it reached, and says when it stopped at the error limit', () => {
     const extra = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`extra${i}`, i]));
-    const found = issues(validatePackEntry({ ...pack, ...extra }));
-    expect(found.length).toBeGreaterThan(0);
-    for (const issue of found) {
-      expect(issue).toEqual({
-        path: expect.stringMatching(/^extra\d$/) as string,
+    expect(issues(validatePackEntry({ ...pack, ...extra }))).toEqual([
+      ...Array.from({ length: 8 }, (_, i) => ({
+        path: `extra${i}`,
         message: 'is not a field this document can have',
-      });
-    }
+      })),
+      { path: '', message: CAPPED },
+    ]);
+  });
+
+  it('does not add the limit notice to a list that is complete', () => {
+    const extra = Object.fromEntries(Array.from({ length: 3 }, (_, i) => [`extra${i}`, i]));
+    expect(issues(validatePackEntry({ ...pack, ...extra })).map((i) => i.path)).toEqual([
+      'extra0',
+      'extra1',
+      'extra2',
+    ]);
+  });
+
+  // TypeBox reports a union's failed branches before the union's own verdict,
+  // so at the error limit the verdict can be cut off. These hold the reasons
+  // true either way.
+  it.each([4, 5, 6, 7, 8])(
+    'reports a preset with neither packs nor rule truthfully alongside %i unknown fields',
+    (count) => {
+      const extra = Object.fromEntries(Array.from({ length: count }, (_, i) => [`x${i}`, i]));
+      const found = issues(
+        validatePreset({ id: 'p', title: 'P', description: 'A preset.', ...extra }),
+      );
+      expect(found.filter((i) => i.path === 'packs' || i.path === 'rule')).toEqual([]);
+      const verdicts = found.filter((i) => i.path === '' && i.message !== CAPPED);
+      expect(verdicts.length).toBeLessThanOrEqual(1);
+      for (const v of verdicts) expect(v.message).toBe('needs one of: packs, rule');
+    },
+  );
+
+  it('reports a role template and a region truthfully at the error limit', () => {
+    const extra = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`x${i}`, i]));
+    const role = issues(validateRoleTemplate({ id: 'r', title: 'R', ...extra }));
+    expect(role.filter((i) => i.path === 'packs' || i.path === 'topics')).toEqual([]);
+    const region = issues(validatePackEntry({ ...pack, region: {}, ...extra }));
+    expect(region.filter((i) => i.path.startsWith('region.'))).toEqual([]);
   });
 
   it('reports a size outside the safe integer range', () => {

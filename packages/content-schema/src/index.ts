@@ -18,6 +18,7 @@ export {
   FirstLightTreeSchema,
   NODE_TYPES,
   validateFirstLightTree,
+  type CheckedFirstLightTree,
   type FirstLightNode,
   type FirstLightTree,
 } from './first-light.ts';
@@ -33,4 +34,4 @@ export {
 } from './pack.ts';
 export { PRESET_RULES, PresetSchema, validatePreset, type Preset } from './preset.ts';
 export { RoleTemplateSchema, validateRoleTemplate, type RoleTemplate } from './role-template.ts';
-export { formatIssue, validate, type Issue, type Result } from './validate.ts';
+export { formatIssue, type Issue, type Result } from './validate.ts';
