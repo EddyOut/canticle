@@ -7,13 +7,15 @@ name: conductor-gate
 #
 # An approval covers only the head it was given: a new push removes the label
 # before judging, so a head the Conductor never saw cannot ride a stale
-# approval to green.
+# approval to green. The decision lives in .github/scripts/conductor-gate.sh,
+# which reads the pull request's current labels and head rather than the
+# event's snapshot.
 #
 # pull_request_target runs this file from the base branch with a token that
 # can edit labels, which pull requests from forks need. It is safe here only
-# because this workflow never checks out or runs code from the pull request,
-# and never interpolates text an author controls into a shell command. Keep it
-# that way.
+# because this workflow never checks out or runs code from the pull request
+# (the checkout below is the base branch), and never interpolates text an
+# author controls into a shell command. Keep it that way.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled, unlabeled]
@@ -32,35 +34,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: A new head revokes the old approval
-        if: github.event.action == 'synchronize'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: |
-          case ",${LABELS}," in
-            *,conductor-approved,*)
-              echo "Head changed after approval; removing conductor-approved so the Conductor re-verifies this head."
-              gh pr edit "${PR}" --repo "${REPO}" --remove-label conductor-approved ;;
-            *)
-              echo "No standing approval to revoke." ;;
-          esac
+      # pull_request_target checks out the BASE branch, so this is the
+      # reviewed copy of the script, never the pull request's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: The Conductor has approved this head
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
           HEAD: ${{ github.event.pull_request.head.sha }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
-        run: |
-          if [ "${EVENT}" = synchronize ]; then
-            echo "::error::Head ${HEAD} arrived after any approval and has not been verified by the Conductor."
-            exit 1
-          fi
-          case ",${LABELS}," in
-            *,conductor-approved,*)
-              echo "conductor-approved is present for head ${HEAD}." ;;
-            *)
-              echo "::error::Awaiting the Conductor. The conductor-approved label is applied only by the Conductor as its merge ritual."
-              exit 1 ;;
-          esac
+        run: .github/scripts/conductor-gate.sh
