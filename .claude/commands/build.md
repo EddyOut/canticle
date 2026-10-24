@@ -79,11 +79,22 @@ Repeat until the pool is empty or Paul stops you.
    - **The lockfile is never territory.** `pnpm-lock.yaml` is never declared
      as territory and never edited by hand. Every lane that adds a package or
      a dependency changes it, even when their real work never meets.
-     - **On a conflict** after merging `main` into your branch, take `main`'s
-       copy (`git checkout origin/main -- pnpm-lock.yaml`), run `pnpm install`
-       to regenerate it, then run the full bar again before pushing.
-     - **The same rule** covers any other file a tool generates from the
-       package list.
+     - **On a conflict** after merging `main` into your branch: take `main`'s
+       copy (`git checkout origin/main -- pnpm-lock.yaml`), regenerate it with
+       `pnpm install --no-frozen-lockfile` (plain `pnpm install` will not
+       touch the lockfile when `CI` is set), then `git add pnpm-lock.yaml`,
+       finish the merge, and confirm `git status` is clean. Without the
+       `git add`, the merge commit keeps `main`'s copy and a clean checkout
+       of it fails `pnpm install --frozen-lockfile`. Then run the full bar
+       before pushing.
+     - **A branch that changes the lockfile itself** (an update or a dedupe,
+       with no `package.json` change behind it) loses that change this way,
+       because regenerating rebuilds the lockfile from the `package.json`
+       files. Re-run the command that made the change, and check with
+       `git diff origin/main -- pnpm-lock.yaml` that it is still there.
+     - **Other generated files** follow the same rule: never territory, never
+       merged by hand, regenerated with the tool that writes them. None exists
+       yet; name each one here, with its tool, when it lands.
    - **Before you report a check as passed, name what would make it fail and
      confirm the check can say so.** A command that answers a nearby question
      looks exactly like confirmation.
