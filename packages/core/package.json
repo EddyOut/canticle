@@ -1,0 +1,17 @@
+{
+  "name": "@canticle/core",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "description": "Core logic in pure TypeScript: catalog verification, pack states, storage budget and the space advisor. No network, file system or UI.",
+  "exports": {
+    "./*": "./src/*/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
+}
