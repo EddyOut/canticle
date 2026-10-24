@@ -12,13 +12,13 @@
     },
     "title": {
       "type": "string",
-      "pattern": "\\S",
-      "description": "text that is not blank"
+      "pattern": "[\\p{L}\\p{N}]",
+      "description": "text with at least one letter or digit"
     },
     "description": {
       "type": "string",
-      "pattern": "\\S",
-      "description": "text that is not blank"
+      "pattern": "[\\p{L}\\p{N}]",
+      "description": "text with at least one letter or digit"
     },
     "packs": {
       "type": "array",

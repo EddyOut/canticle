@@ -17,6 +17,44 @@ const read = (name: string): unknown =>
 // leaked into a file fails here. `strictRequired` is off because the
 // presence-only branches (`oneOf: [{required: [packs]}, ...]`) are valid
 // JSON Schema that Ajv's own style rule flags.
+/** Every value stored under `key`, anywhere in a schema. */
+function collect(node: unknown, key: string): unknown[] {
+  if (Array.isArray(node)) return (node as unknown[]).flatMap((n) => collect(n, key));
+  if (typeof node !== 'object' || node === null) return [];
+  return Object.entries(node as Record<string, unknown>).flatMap(([k, v]) =>
+    k === key ? [v] : collect(v, key),
+  );
+}
+
+/**
+ * What in a pattern ECMAScript (u flag) and Go RE2 read differently, or only
+ * one of them reads: the shorthand classes and boundaries (Unicode-aware in
+ * one, ASCII in the other, or with different whitespace sets), an unescaped
+ * `.` outside a class (line terminators differ), lookaround, named groups and
+ * backreferences.
+ */
+function nonPortable(pattern: string): string[] {
+  const found: string[] = [];
+  let inClass = false;
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '\\') {
+      const next = pattern[i + 1] ?? '';
+      if ('sSdDwWbB'.includes(next) || /[1-9k]/.test(next)) found.push(`\\${next}`);
+      i++;
+    } else if (inClass) {
+      if (c === ']') inClass = false;
+    } else if (c === '[') {
+      inClass = true;
+    } else if (c === '.') {
+      found.push('.');
+    } else if (c === '(' && pattern[i + 1] === '?' && '=!<'.includes(pattern[i + 2] ?? '')) {
+      found.push(pattern.slice(i, i + 3));
+    }
+  }
+  return found;
+}
+
 const ajv = new Ajv2020({ strict: true, strictRequired: false, allErrors: true });
 const compiled = new Map(PUBLISHED.map((p) => [p.name, ajv.compile(read(p.name) as object)]));
 const ajvFor = (schema: string) => {
@@ -45,22 +83,35 @@ describe('published JSON Schema files', () => {
   }
 
   it('use only patterns that ECMAScript and Go RE2 read the same way', () => {
-    const patterns: string[] = [];
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) node.forEach(walk);
-      else if (typeof node === 'object' && node !== null) {
-        for (const [key, value] of Object.entries(node)) {
-          if (key === 'pattern' && typeof value === 'string') patterns.push(value);
-          else walk(value);
-        }
-      }
-    };
-    PUBLISHED.forEach((p) => walk(read(p.name)));
+    const patterns = PUBLISHED.flatMap((p) => collect(read(p.name), 'pattern')).filter(
+      (v): v is string => typeof v === 'string',
+    );
     expect(patterns.length).toBeGreaterThan(0);
     for (const pattern of patterns) {
-      // Lookaround, named groups and backreferences are ECMAScript-only.
-      expect(pattern).not.toMatch(/\(\?<?[=!]|\(\?<[A-Za-z]|\\[1-9]|\\k</);
+      expect(nonPortable(pattern), pattern).toEqual([]);
       expect(() => new RegExp(pattern, 'u')).not.toThrow();
+    }
+  });
+
+  it('refuse the constructs the two engines read differently', () => {
+    expect(nonPortable('\\S')).toEqual(['\\S']);
+    expect(nonPortable('[^\\s]')).toEqual(['\\s']);
+    expect(nonPortable('^a.b$')).toEqual(['.']);
+    expect(nonPortable('\\bword\\d')).toEqual(['\\b', '\\d']);
+    expect(nonPortable('(?=a)(?<n>b)\\1')).toEqual(['(?=', '(?<', '\\1']);
+    expect(nonPortable('[.]\\.[\\p{L}\\p{N}]')).toEqual([]);
+  });
+
+  it('use only presence-only union branches, which the validator reports by name', () => {
+    const unions = PUBLISHED.flatMap((p) => [
+      ...collect(read(p.name), 'anyOf'),
+      ...collect(read(p.name), 'oneOf'),
+    ]);
+    expect(unions.length).toBeGreaterThan(0);
+    for (const branches of unions) {
+      for (const branch of branches as unknown[]) {
+        expect(branch).toEqual({ required: [expect.any(String)] });
+      }
     }
   });
 });
