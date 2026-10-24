@@ -1,0 +1,10 @@
+{
+  "schema": "preset",
+  "about": "A preset that is a rule rather than a list.",
+  "value": {
+    "id": "archive",
+    "title": "Archive",
+    "description": "Everything this phone can hold.",
+    "rule": "everything-that-fits"
+  }
+}

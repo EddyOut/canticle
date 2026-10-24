@@ -1,0 +1,32 @@
+{
+  "schema": "pack-entry",
+  "about": "A relation target given as a bare id instead of {id, variant?}.",
+  "level": "schema",
+  "value": {
+    "id": "example_wiki_en",
+    "variant": "nopic",
+    "version": "2026-09",
+    "title": "Example encyclopedia, no pictures",
+    "description": "An encyclopedia in English, without its images.",
+    "format": "zim",
+    "urls": [
+      "https://mirror-a.example.org/zim/example_wiki_en_nopic_2026-09.zim",
+      "https://mirror-b.example.org/zim/example_wiki_en_nopic_2026-09.zim"
+    ],
+    "size_bytes": 53687091200,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Example contributors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["hold", "root", "forge"],
+    "topics": ["encyclopedia"],
+    "relations": {
+      "contains": ["example_wiki_en"]
+    }
+  },
+  "issues": [
+    {
+      "path": "relations.contains[0]"
+    }
+  ]
+}

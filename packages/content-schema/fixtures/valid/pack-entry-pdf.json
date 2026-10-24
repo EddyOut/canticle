@@ -1,0 +1,20 @@
+{
+  "schema": "pack-entry",
+  "about": "A single document whose license is not an SPDX identifier.",
+  "value": {
+    "id": "example_field_guide",
+    "variant": "standard",
+    "version": "2019",
+    "title": "Example field guide",
+    "description": "A printable guide, as one document.",
+    "format": "pdf",
+    "urls": ["https://publisher.example.org/books/field-guide-2019.pdf"],
+    "size_bytes": 12582912,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "Publisher's open copyright policy",
+    "attribution": "Example Publisher",
+    "tiers": ["fiat-homo"],
+    "phases": ["first-light", "hold"],
+    "topics": ["medicine", "first-aid"]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "preset",
+  "about": "A preset that has both a list and a rule.",
+  "level": "schema",
+  "value": {
+    "id": "archive",
+    "title": "Archive",
+    "description": "Everything.",
+    "rule": "everything-that-fits",
+    "packs": [
+      {
+        "id": "example_med_en",
+        "variant": "maxi"
+      }
+    ]
+  },
+  "issues": [
+    {
+      "path": ""
+    }
+  ]
+}

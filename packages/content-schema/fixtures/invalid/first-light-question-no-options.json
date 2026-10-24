@@ -1,0 +1,93 @@
+{
+  "schema": "first-light-tree",
+  "about": "A question node with no options.",
+  "level": "schema",
+  "value": {
+    "id": "example-tree",
+    "title": "Example tree for schema tests",
+    "start": "start",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "question",
+        "text": "Example question?",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "scenario": "example-scenario"
+      },
+      {
+        "id": "step-a",
+        "type": "action",
+        "text": "Example action.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "options": [
+          {
+            "label": "Next",
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "id": "step-b",
+        "type": "checklist",
+        "text": "Example checklist.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "items": ["First example item", "Second example item"],
+        "options": [
+          {
+            "label": "Next",
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "id": "end",
+        "type": "info",
+        "text": "Example end.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "reviewedBy": "Example Reviewer",
+        "reviewedOn": "2026-10-24"
+      }
+    ]
+  },
+  "issues": [
+    {
+      "path": "nodes[0].options"
+    }
+  ]
+}

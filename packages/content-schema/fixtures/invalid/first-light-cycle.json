@@ -1,0 +1,103 @@
+{
+  "schema": "first-light-tree",
+  "about": "A path that loops back to the start.",
+  "level": "tree",
+  "value": {
+    "id": "example-tree",
+    "title": "Example tree for schema tests",
+    "start": "start",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "question",
+        "text": "Example question?",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "options": [
+          {
+            "label": "Yes",
+            "next": "step-a"
+          },
+          {
+            "label": "No",
+            "next": "step-b"
+          }
+        ],
+        "scenario": "example-scenario"
+      },
+      {
+        "id": "step-a",
+        "type": "action",
+        "text": "Example action.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "options": [
+          {
+            "label": "Next",
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "id": "step-b",
+        "type": "checklist",
+        "text": "Example checklist.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "items": ["First example item", "Second example item"],
+        "options": [
+          {
+            "label": "Next",
+            "next": "start"
+          }
+        ]
+      },
+      {
+        "id": "end",
+        "type": "info",
+        "text": "Example end.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "reviewedBy": "Example Reviewer",
+        "reviewedOn": "2026-10-24"
+      }
+    ]
+  },
+  "issues": [
+    {
+      "path": "nodes[2].options[0].next"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "pack-entry",
+  "about": "A mirror address over plain http.",
+  "level": "schema",
+  "value": {
+    "id": "example_wiki_en",
+    "variant": "nopic",
+    "version": "2026-09",
+    "title": "Example encyclopedia, no pictures",
+    "description": "An encyclopedia in English, without its images.",
+    "format": "zim",
+    "urls": ["http://mirror-a.example.org/zim/example_wiki_en_nopic_2026-09.zim"],
+    "size_bytes": 53687091200,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Example contributors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["hold", "root", "forge"],
+    "topics": ["encyclopedia"]
+  },
+  "issues": [
+    {
+      "path": "urls[0]"
+    }
+  ]
+}

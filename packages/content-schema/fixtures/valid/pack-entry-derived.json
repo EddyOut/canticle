@@ -1,0 +1,37 @@
+{
+  "schema": "pack-entry",
+  "about": "A derived pack recording its lineage (Phase 3 shape).",
+  "value": {
+    "id": "example_wiki_en",
+    "variant": "subset-medical",
+    "version": "2026-09",
+    "title": "Example encyclopedia, medical articles",
+    "description": "The medical articles cut from the full encyclopedia.",
+    "format": "zim",
+    "urls": ["https://hub.example.org/packs/example_wiki_en_subset-medical_2026-09.zim"],
+    "size_bytes": 209715200,
+    "sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Example contributors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["hold", "root", "forge"],
+    "topics": ["medicine"],
+    "relations": {
+      "contained_by": [
+        {
+          "id": "example_wiki_en",
+          "variant": "maxi"
+        }
+      ]
+    },
+    "lineage": {
+      "source": {
+        "id": "example_wiki_en",
+        "variant": "maxi",
+        "version": "2026-09"
+      },
+      "source_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "deriving_node_key": "example-node-key"
+    }
+  }
+}
