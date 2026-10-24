@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pack entry",
+  "type": "object",
+  "required": [
+    "id",
+    "variant",
+    "version",
+    "title",
+    "description",
+    "format",
+    "urls",
+    "size_bytes",
+    "sha256",
+    "license",
+    "attribution",
+    "tiers",
+    "phases",
+    "topics"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "variant": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+(?:[._+-][A-Za-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "a version such as 2026-09: letters and digits, with single dots, dashes, underscores or plus signs between them"
+    },
+    "title": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "description": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "format": {
+      "enum": [
+        "zim",
+        "pmtiles",
+        "pdf",
+        "epub",
+        "gguf",
+        "iso",
+        "img",
+        "tar",
+        "apt-mirror",
+        "firmware"
+      ]
+    },
+    "urls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?(?:[/?#][^\\s]*)?$",
+        "maxLength": 2048,
+        "description": "an https:// address with a host name and no spaces"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "a SHA-256 fingerprint: 64 lowercase hexadecimal characters"
+    },
+    "license": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "attribution": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "tiers": {
+      "type": "array",
+      "items": {
+        "enum": ["fiat-homo", "fiat-lux"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "enum": ["first-light", "hold", "root", "forge"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "maxLength": 64,
+        "description": "a tag such as first-aid: lowercase letters and digits, with single dashes between"
+      },
+      "uniqueItems": true
+    },
+    "region": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "maxLength": 64,
+          "description": "a tag such as first-aid: lowercase letters and digits, with single dashes between"
+        },
+        "bbox": {
+          "type": "object",
+          "required": ["west", "south", "east", "north"],
+          "properties": {
+            "west": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "south": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            },
+            "east": {
+              "type": "number",
+              "minimum": -180,
+              "maximum": 180
+            },
+            "north": {
+              "type": "number",
+              "minimum": -90,
+              "maximum": 90
+            }
+          },
+          "additionalProperties": false,
+          "description": "a bounding box: west, south, east and north, in degrees"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["name"]
+        },
+        {
+          "required": ["bbox"]
+        }
+      ],
+      "description": "a region: a named area, a bounding box, or both"
+    },
+    "relations": {
+      "type": "object",
+      "properties": {
+        "contains": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              },
+              "variant": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              }
+            },
+            "additionalProperties": false,
+            "description": "a pack reference: an object with an id and, optionally, a variant"
+          },
+          "uniqueItems": true
+        },
+        "contained_by": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              },
+              "variant": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              }
+            },
+            "additionalProperties": false,
+            "description": "a pack reference: an object with an id and, optionally, a variant"
+          },
+          "uniqueItems": true
+        },
+        "overlaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              },
+              "variant": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              }
+            },
+            "additionalProperties": false,
+            "description": "a pack reference: an object with an id and, optionally, a variant"
+          },
+          "uniqueItems": true
+        },
+        "supersedes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              },
+              "variant": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                "maxLength": 64,
+                "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+              }
+            },
+            "additionalProperties": false,
+            "description": "a pack reference: an object with an id and, optionally, a variant"
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "relations to other packs"
+    },
+    "lineage": {
+      "type": "object",
+      "required": ["source", "source_sha256", "deriving_node_key"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["id", "variant", "version"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+              "maxLength": 64,
+              "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+            },
+            "variant": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+              "maxLength": 64,
+              "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+            },
+            "version": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]+(?:[._+-][A-Za-z0-9]+)*$",
+              "maxLength": 64,
+              "description": "a version such as 2026-09: letters and digits, with single dots, dashes, underscores or plus signs between them"
+            }
+          },
+          "additionalProperties": false,
+          "description": "the source pack: an object with an id, a variant and a version"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "a SHA-256 fingerprint: 64 lowercase hexadecimal characters"
+        },
+        "deriving_node_key": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "text that is not blank"
+        }
+      },
+      "additionalProperties": false,
+      "description": "a lineage: the source pack, its fingerprint and the key of the node that derived it"
+    },
+    "min_app_version": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$",
+      "description": "a version number such as 1.4.0"
+    }
+  },
+  "additionalProperties": false,
+  "description": "a pack entry: one downloadable file, where to fetch it, its fingerprint and its license"
+}

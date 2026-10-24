@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First Light tree",
+  "$comment": "JSON Schema cannot express every rule for a tree. Readers must also check that node ids are unique, that start and every next name a node in the same tree, that every node can be reached from start, and that no path loops back on itself.",
+  "type": "object",
+  "required": ["id", "title", "start", "nodes"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "title": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "start": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "text", "sources", "phase", "medical"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "type": {
+            "enum": ["question", "action", "checklist", "info"]
+          },
+          "text": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "text that is not blank"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "next"],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "pattern": "\\S",
+                  "description": "text that is not blank"
+                },
+                "next": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                  "maxLength": 64,
+                  "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+                }
+              },
+              "additionalProperties": false,
+              "description": "an option: an object with a label and a next node"
+            },
+            "minItems": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "\\S",
+              "description": "text that is not blank"
+            },
+            "minItems": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["doc", "section", "edition"],
+              "properties": {
+                "doc": {
+                  "type": "string",
+                  "pattern": "\\S",
+                  "description": "text that is not blank"
+                },
+                "section": {
+                  "type": "string",
+                  "pattern": "\\S",
+                  "description": "text that is not blank"
+                },
+                "edition": {
+                  "type": "string",
+                  "pattern": "\\S",
+                  "description": "text that is not blank"
+                },
+                "url": {
+                  "type": "string",
+                  "pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?(?:[/?#][^\\s]*)?$",
+                  "maxLength": 2048,
+                  "description": "an https:// address with a host name and no spaces"
+                }
+              },
+              "additionalProperties": false,
+              "description": "a source: an object with doc, section, edition and, optionally, url"
+            },
+            "minItems": 1
+          },
+          "phase": {
+            "enum": ["first-light", "hold", "root", "forge"]
+          },
+          "scenario": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "medical": {
+            "type": "boolean"
+          },
+          "reviewedBy": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "text that is not blank"
+          },
+          "reviewedOn": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$",
+            "description": "a date written as YYYY-MM-DD"
+          }
+        },
+        "additionalProperties": false,
+        "dependentRequired": {
+          "reviewedBy": ["reviewedOn"],
+          "reviewedOn": ["reviewedBy"]
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "question"
+                }
+              },
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["options"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "checklist"
+                }
+              },
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["items"]
+            }
+          }
+        ],
+        "description": "a First Light node"
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "description": "a First Light tree: its start node and every node in it"
+}

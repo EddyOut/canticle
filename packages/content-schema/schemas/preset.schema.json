@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Preset",
+  "type": "object",
+  "required": ["id", "title", "description"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "title": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "description": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "text that is not blank"
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "variant"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          }
+        },
+        "additionalProperties": false,
+        "description": "a pack choice: an object with an id and a variant"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "rule": {
+      "enum": ["everything-that-fits"]
+    }
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "required": ["packs"]
+    },
+    {
+      "required": ["rule"]
+    }
+  ],
+  "description": "a preset: a named set of packs, or a rule for choosing them"
+}
