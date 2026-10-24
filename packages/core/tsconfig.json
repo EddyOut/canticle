@@ -1,0 +1,7 @@
+{
+  // No `types` and no DOM library: core code cannot name `node:fs`, `fetch`,
+  // `process` or `document`, so "no network, file system or UI" is checked by
+  // the typecheck. Adding Node or DOM types here gives that up.
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"]
+}
