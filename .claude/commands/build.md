@@ -104,6 +104,13 @@ Repeat until the pool is empty or Paul stops you.
      the file is byte-identical. Pair each mutation with a control test that
      must stay green. The mutation must be one a careless hand could write and
      the code would happily run. Record it in the pull request.
+     - **Clear Vitest's cache when the break is not in a source file.** Vitest
+       keeps transformed modules in `node_modules/.vitest-cache`, keyed on each
+       source file's content, so a mutation that changes only `package.json`,
+       a tsconfig or a config file can leave every test green for the wrong
+       reason. Run `npx vitest --clearCache` first, or pass
+       `--no-fsModuleCache` to the run. A green result on a warm cache proves
+       nothing. CI installs fresh, so CI is not affected.
    - **Native code:** you cannot build iOS here. CI on macOS runners is the
      automated check; list the on-device checks Paul needs to run in the pull
      request.
