@@ -1,0 +1,21 @@
+{
+  "schema": "pack-entry",
+  "about": "An on-device model; topics may be empty.",
+  "value": {
+    "id": "example_model_3b",
+    "variant": "q4_k_m",
+    "version": "2026-08",
+    "title": "Example assistant model",
+    "description": "A small model that answers from the library.",
+    "format": "gguf",
+    "urls": ["https://models.example.org/example-3b-q4_k_m.gguf"],
+    "size_bytes": 2147483648,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "Apache-2.0",
+    "attribution": "Example Model Authors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["first-light", "hold", "root", "forge"],
+    "topics": [],
+    "min_app_version": "1.2.0"
+  }
+}

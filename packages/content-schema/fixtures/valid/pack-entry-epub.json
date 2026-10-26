@@ -1,0 +1,23 @@
+{
+  "schema": "pack-entry",
+  "about": "A book for the reading shelf, with a region given by name only.",
+  "value": {
+    "id": "example_novel",
+    "variant": "standard",
+    "version": "1.0",
+    "title": "Example novel",
+    "description": "A public-domain novel for the reading shelf.",
+    "format": "epub",
+    "urls": ["https://books.example.org/ebooks/example-novel.epub"],
+    "size_bytes": 524288,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "Public domain",
+    "attribution": "Example Library",
+    "tiers": ["fiat-lux"],
+    "phases": ["root", "forge"],
+    "topics": ["reading-shelf", "literature"],
+    "region": {
+      "name": "mountain-west"
+    }
+  }
+}

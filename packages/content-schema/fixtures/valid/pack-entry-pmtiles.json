@@ -1,0 +1,29 @@
+{
+  "schema": "pack-entry",
+  "about": "A map region with a named area and a bounding box.",
+  "value": {
+    "id": "example_basemap",
+    "variant": "colorado",
+    "version": "2026-10-01",
+    "title": "Example map of Colorado",
+    "description": "Streets, trails and place names for one state.",
+    "format": "pmtiles",
+    "urls": ["https://tiles.example.org/example_basemap_colorado_2026-10-01.pmtiles"],
+    "size_bytes": 1073741824,
+    "sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+    "license": "ODbL-1.0",
+    "attribution": "© OpenStreetMap contributors",
+    "tiers": ["fiat-homo"],
+    "phases": ["first-light", "hold"],
+    "topics": ["maps", "navigation"],
+    "region": {
+      "name": "us-co",
+      "bbox": {
+        "west": -109.06,
+        "south": 36.99,
+        "east": -102.04,
+        "north": 41.0
+      }
+    }
+  }
+}

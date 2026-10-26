@@ -1,0 +1,19 @@
+{
+  "schema": "preset",
+  "about": "A preset that lists exact variants.",
+  "value": {
+    "id": "example-preset",
+    "title": "Example preset",
+    "description": "A preset for schema tests.",
+    "packs": [
+      {
+        "id": "example_med_en",
+        "variant": "maxi"
+      },
+      {
+        "id": "example_field_guide",
+        "variant": "standard"
+      }
+    ]
+  }
+}

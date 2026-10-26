@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "First Light tree",
+  "$comment": "JSON Schema cannot express every rule for a tree. Readers must also check that node ids are unique, that start and every next name a node in the same tree, that every node can be reached from start, and that no path loops back on itself.",
+  "type": "object",
+  "required": ["id", "title", "start", "nodes"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "title": {
+      "type": "string",
+      "pattern": "[\\p{L}\\p{N}]",
+      "description": "text with at least one letter or digit"
+    },
+    "start": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "text", "sources", "phase", "medical"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "type": {
+            "enum": ["question", "action", "checklist", "info"]
+          },
+          "text": {
+            "type": "string",
+            "pattern": "[\\p{L}\\p{N}]",
+            "description": "text with at least one letter or digit"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "next"],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "pattern": "[\\p{L}\\p{N}]",
+                  "description": "text with at least one letter or digit"
+                },
+                "next": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+                  "maxLength": 64,
+                  "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+                }
+              },
+              "additionalProperties": false,
+              "description": "an option: an object with a label and a next node"
+            },
+            "minItems": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "[\\p{L}\\p{N}]",
+              "description": "text with at least one letter or digit"
+            },
+            "minItems": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["doc", "section", "edition"],
+              "properties": {
+                "doc": {
+                  "type": "string",
+                  "pattern": "[\\p{L}\\p{N}]",
+                  "description": "text with at least one letter or digit"
+                },
+                "section": {
+                  "type": "string",
+                  "pattern": "[\\p{L}\\p{N}]",
+                  "description": "text with at least one letter or digit"
+                },
+                "edition": {
+                  "type": "string",
+                  "pattern": "[\\p{L}\\p{N}]",
+                  "description": "text with at least one letter or digit"
+                },
+                "url": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "description": "an https:// address",
+                  "allOf": [
+                    {
+                      "pattern": "^https://",
+                      "description": "an address that starts with https://"
+                    },
+                    {
+                      "pattern": "^[A-Za-z0-9._~!$&'()*+,;=:@/?#%\\[\\]-]*$",
+                      "description": "an address made of URL characters only: no spaces, anything else percent-encoded"
+                    },
+                    {
+                      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://[^/?#@]*(?:[/?#]|$)",
+                      "description": "an address with no user name or password before the host"
+                    },
+                    {
+                      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://(?:[^/?#@]*@)?[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+(?::[^/?#]*)?(?:[/?#]|$)",
+                      "description": "an address whose host is a name such as mirror.example.org"
+                    },
+                    {
+                      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://(?:[^/?#@]*@)?(?:\\[[^/?#@]*\\]|[^/?#:@]*)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:[/?#]|$)",
+                      "description": "an address whose port, if it has one, is a number from 1 to 65535"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false,
+              "description": "a source: an object with doc, section, edition and, optionally, url"
+            },
+            "minItems": 1
+          },
+          "phase": {
+            "enum": ["first-light", "hold", "root", "forge"]
+          },
+          "scenario": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "medical": {
+            "type": "boolean"
+          },
+          "reviewedBy": {
+            "type": "string",
+            "pattern": "[\\p{L}\\p{N}]",
+            "description": "text with at least one letter or digit"
+          },
+          "reviewedOn": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$",
+            "description": "a date written as YYYY-MM-DD"
+          }
+        },
+        "additionalProperties": false,
+        "dependentRequired": {
+          "reviewedBy": ["reviewedOn"],
+          "reviewedOn": ["reviewedBy"]
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "question"
+                }
+              },
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["options"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "checklist"
+                }
+              },
+              "required": ["type"]
+            },
+            "then": {
+              "required": ["items"]
+            }
+          }
+        ],
+        "description": "a First Light node"
+      },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false,
+  "description": "a First Light tree: its start node and every node in it"
+}

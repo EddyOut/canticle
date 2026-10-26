@@ -1,0 +1,37 @@
+{
+  "schema": "pack-entry",
+  "about": "The variant with pictures, which contains the one without and supersedes an older pack.",
+  "value": {
+    "id": "example_wiki_en",
+    "variant": "maxi",
+    "version": "2026-09",
+    "title": "Example encyclopedia, with pictures",
+    "description": "The English encyclopedia with its images.",
+    "format": "zim",
+    "urls": ["https://mirror-a.example.org/zim/example_wiki_en_maxi_2026-09.zim"],
+    "size_bytes": 107374182400,
+    "sha256": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Example contributors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["hold", "root", "forge"],
+    "topics": ["encyclopedia"],
+    "relations": {
+      "contains": [
+        {
+          "id": "example_wiki_en",
+          "variant": "nopic"
+        }
+      ],
+      "supersedes": [
+        {
+          "id": "example_wiki_old"
+        },
+        {
+          "id": "example_wiki_older",
+          "variant": "nopic"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "pack-entry",
+  "about": "A Phase 3 format (img): the schema carries it, though no version 1 code opens it.",
+  "value": {
+    "id": "example_img",
+    "variant": "rpi-arm64",
+    "version": "2026-10",
+    "title": "Example single-board computer image",
+    "description": "Stored and verified on this phone, served by the hub.",
+    "format": "img",
+    "urls": ["https://archive.example.org/img/rpi-arm64.bin"],
+    "size_bytes": 3221225472,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "GPL-3.0-only",
+    "attribution": "Example Project",
+    "tiers": ["fiat-lux"],
+    "phases": ["root", "forge"],
+    "topics": ["computing"]
+  }
+}

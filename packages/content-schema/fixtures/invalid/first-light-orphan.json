@@ -1,0 +1,118 @@
+{
+  "schema": "first-light-tree",
+  "about": "A node that cannot be reached from the start.",
+  "level": "tree",
+  "value": {
+    "id": "example-tree",
+    "title": "Example tree for schema tests",
+    "start": "start",
+    "nodes": [
+      {
+        "id": "start",
+        "type": "question",
+        "text": "Example question?",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false,
+        "options": [
+          {
+            "label": "Yes",
+            "next": "step-a"
+          },
+          {
+            "label": "No",
+            "next": "step-b"
+          }
+        ],
+        "scenario": "example-scenario"
+      },
+      {
+        "id": "step-a",
+        "type": "action",
+        "text": "Example action.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "hold",
+        "medical": true,
+        "options": [
+          {
+            "label": "Next",
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "id": "step-b",
+        "type": "checklist",
+        "text": "Example checklist.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "root",
+        "medical": false,
+        "items": ["First example item", "Second example item"],
+        "options": [
+          {
+            "label": "Next",
+            "next": "end"
+          }
+        ]
+      },
+      {
+        "id": "end",
+        "type": "info",
+        "text": "Example end.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "forge",
+        "medical": false,
+        "reviewedBy": "Example Reviewer",
+        "reviewedOn": "2026-10-24"
+      },
+      {
+        "id": "lost",
+        "type": "info",
+        "text": "Example node nothing points to.",
+        "sources": [
+          {
+            "doc": "Example source document",
+            "section": "Chapter 1",
+            "edition": "2026 edition",
+            "url": "https://publisher.example.org/source.pdf"
+          }
+        ],
+        "phase": "first-light",
+        "medical": false
+      }
+    ]
+  },
+  "issues": [
+    {
+      "path": "nodes[4]"
+    }
+  ]
+}

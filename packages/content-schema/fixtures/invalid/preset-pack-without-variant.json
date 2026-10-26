@@ -1,0 +1,20 @@
+{
+  "schema": "preset",
+  "about": "A preset choice that does not name its variant.",
+  "level": "schema",
+  "value": {
+    "id": "example-preset",
+    "title": "Example preset",
+    "description": "A preset for schema tests.",
+    "packs": [
+      {
+        "id": "example_med_en"
+      }
+    ]
+  },
+  "issues": [
+    {
+      "path": "packs[0].variant"
+    }
+  ]
+}

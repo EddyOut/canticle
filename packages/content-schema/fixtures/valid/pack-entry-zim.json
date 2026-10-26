@@ -1,0 +1,41 @@
+{
+  "schema": "pack-entry",
+  "about": "A ZIM pack with variant-aware relations and a minimum app version.",
+  "value": {
+    "id": "example_wiki_en",
+    "variant": "nopic",
+    "version": "2026-09",
+    "title": "Example encyclopedia, no pictures",
+    "description": "An encyclopedia in English, without its images.",
+    "format": "zim",
+    "urls": [
+      "https://mirror-a.example.org/zim/example_wiki_en_nopic_2026-09.zim",
+      "https://mirror-b.example.org/zim/example_wiki_en_nopic_2026-09.zim"
+    ],
+    "size_bytes": 53687091200,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Example contributors",
+    "tiers": ["fiat-homo", "fiat-lux"],
+    "phases": ["hold", "root", "forge"],
+    "topics": ["encyclopedia"],
+    "relations": {
+      "contained_by": [
+        {
+          "id": "example_wiki_en",
+          "variant": "maxi"
+        }
+      ],
+      "overlaps": [
+        {
+          "id": "example_med_en"
+        },
+        {
+          "id": "example_med_en_extra",
+          "variant": "maxi"
+        }
+      ]
+    },
+    "min_app_version": "1.0.0"
+  }
+}

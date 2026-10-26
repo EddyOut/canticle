@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Role template",
+  "type": "object",
+  "required": ["id", "title"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+    },
+    "title": {
+      "type": "string",
+      "pattern": "[\\p{L}\\p{N}]",
+      "description": "text with at least one letter or digit"
+    },
+    "description": {
+      "type": "string",
+      "pattern": "[\\p{L}\\p{N}]",
+      "description": "text with at least one letter or digit"
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          },
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "maxLength": 64,
+            "description": "an identifier such as wikipedia_en_all: lowercase letters and digits, with single dots, dashes or underscores between them"
+          }
+        },
+        "additionalProperties": false,
+        "description": "a pack reference: an object with an id and, optionally, a variant"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+        "maxLength": 64,
+        "description": "a tag such as first-aid: lowercase letters and digits, with single dashes between"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": ["packs"]
+    },
+    {
+      "required": ["topics"]
+    }
+  ],
+  "description": "a role template: the packs or topics a role selects"
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "pack-entry",
+  "about": "A Phase 3 format: the schema carries it, though no version 1 code opens it.",
+  "value": {
+    "id": "example_os_installer",
+    "variant": "arm64",
+    "version": "13.1",
+    "title": "Example operating system installer",
+    "description": "A disk image for laptops and small computers.",
+    "format": "iso",
+    "urls": ["https://os.example.org/images/example-13.1-arm64.iso"],
+    "size_bytes": 4294967296,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "license": "GPL-2.0-or-later",
+    "attribution": "Example OS Project",
+    "tiers": ["fiat-lux"],
+    "phases": ["root", "forge"],
+    "topics": ["computing"]
+  }
+}

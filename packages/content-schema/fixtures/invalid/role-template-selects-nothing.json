@@ -1,0 +1,14 @@
+{
+  "schema": "role-template",
+  "about": "A role template with neither packs nor topics.",
+  "level": "schema",
+  "value": {
+    "id": "medic",
+    "title": "Medic"
+  },
+  "issues": [
+    {
+      "path": ""
+    }
+  ]
+}
